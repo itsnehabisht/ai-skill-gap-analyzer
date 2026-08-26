@@ -1,0 +1,94 @@
+{
+  "data_scientist": {
+    "title": "Data Scientist",
+    "required_skills": [
+      "Python",
+      "SQL",
+      "Pandas",
+      "NumPy",
+      "Statistics",
+      "Machine Learning",
+      "Scikit-learn",
+      "Data Visualization"
+    ]
+  },
+
+  "data_analyst": {
+    "title": "Data Analyst",
+    "required_skills": [
+      "Excel",
+      "SQL",
+      "Python",
+      "Pandas",
+      "Power BI",
+      "Data Visualization",
+      "Statistics"
+    ]
+  },
+
+  "frontend_developer": {
+    "title": "Frontend Developer",
+    "required_skills": [
+      "HTML",
+      "CSS",
+      "JavaScript",
+      "React",
+      "TypeScript",
+      "Git",
+      "Responsive Design",
+      "REST APIs"
+    ]
+  },
+
+  "backend_developer": {
+    "title": "Backend Developer",
+    "required_skills": [
+      "Python",
+      "REST APIs",
+      "SQL",
+      "Git",
+      "Database Management",
+      "Authentication",
+      "Docker"
+    ]
+  },
+
+  "business_analyst": {
+    "title": "Business Analyst",
+    "required_skills": [
+      "Excel",
+      "SQL",
+      "Power BI",
+      "Data Analysis",
+      "Business Communication",
+      "Requirements Gathering",
+      "Problem Solving"
+    ]
+  },
+
+  "digital_marketing_specialist": {
+    "title": "Digital Marketing Specialist",
+    "required_skills": [
+      "SEO",
+      "Social Media Marketing",
+      "Content Marketing",
+      "Google Analytics",
+      "Email Marketing",
+      "Copywriting",
+      "Communication"
+    ]
+  },
+
+  "clinical_research_associate": {
+    "title": "Clinical Research Associate",
+    "required_skills": [
+      "Clinical Research",
+      "Clinical Trials",
+      "Good Clinical Practice",
+      "Medical Terminology",
+      "Data Management",
+      "Regulatory Documentation",
+      "Pharmacology"
+    ]
+  }
+}

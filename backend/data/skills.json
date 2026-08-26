@@ -1,0 +1,196 @@
+{
+  "Python": {
+    "category": "Programming",
+    "description": "Programming language widely used in software development, automation, and data science."
+  },
+
+  "SQL": {
+    "category": "Database",
+    "description": "Language used to query and manage relational databases."
+  },
+
+  "Pandas": {
+    "category": "Data Science",
+    "description": "Python library used for data manipulation and analysis."
+  },
+
+  "NumPy": {
+    "category": "Data Science",
+    "description": "Python library used for numerical computing."
+  },
+
+  "Statistics": {
+    "category": "Data Science",
+    "description": "Methods for analyzing, interpreting, and communicating data."
+  },
+
+  "Machine Learning": {
+    "category": "Artificial Intelligence",
+    "description": "Techniques that allow computers to learn patterns from data."
+  },
+
+  "Scikit-learn": {
+    "category": "Artificial Intelligence",
+    "description": "Python library for machine learning algorithms and workflows."
+  },
+
+  "Data Visualization": {
+    "category": "Data Science",
+    "description": "Communicating data insights through charts and visual representations."
+  },
+
+  "Excel": {
+    "category": "Business",
+    "description": "Spreadsheet software used for analysis, reporting, and business operations."
+  },
+
+  "Power BI": {
+    "category": "Business Intelligence",
+    "description": "Business intelligence platform used to analyze and visualize data."
+  },
+
+  "HTML": {
+    "category": "Web Development",
+    "description": "Markup language used to structure web pages."
+  },
+
+  "CSS": {
+    "category": "Web Development",
+    "description": "Technology used to style and design web pages."
+  },
+
+  "JavaScript": {
+    "category": "Programming",
+    "description": "Programming language widely used for interactive web applications."
+  },
+
+  "React": {
+    "category": "Web Development",
+    "description": "JavaScript library for building user interfaces."
+  },
+
+  "TypeScript": {
+    "category": "Programming",
+    "description": "Typed programming language built on JavaScript."
+  },
+
+  "Git": {
+    "category": "Development Tools",
+    "description": "Version control system used to track and manage code changes."
+  },
+
+  "Responsive Design": {
+    "category": "Web Development",
+    "description": "Design approach that allows websites to work across different screen sizes."
+  },
+
+  "REST APIs": {
+    "category": "Backend Development",
+    "description": "Web API architecture used for communication between applications."
+  },
+
+  "Database Management": {
+    "category": "Database",
+    "description": "Managing, organizing, and maintaining databases."
+  },
+
+  "Authentication": {
+    "category": "Backend Development",
+    "description": "Techniques used to verify the identity of users."
+  },
+
+  "Docker": {
+    "category": "DevOps",
+    "description": "Platform used to package and run applications in containers."
+  },
+
+  "Data Analysis": {
+    "category": "Business",
+    "description": "Process of examining data to discover useful insights."
+  },
+
+  "Business Communication": {
+    "category": "Soft Skills",
+    "description": "Communicating information clearly in professional business environments."
+  },
+
+  "Requirements Gathering": {
+    "category": "Business Analysis",
+    "description": "Process of identifying and documenting business needs."
+  },
+
+  "Problem Solving": {
+    "category": "Soft Skills",
+    "description": "Ability to analyze problems and develop effective solutions."
+  },
+
+  "SEO": {
+    "category": "Digital Marketing",
+    "description": "Techniques used to improve visibility in search engines."
+  },
+
+  "Social Media Marketing": {
+    "category": "Digital Marketing",
+    "description": "Using social platforms to promote products, services, or brands."
+  },
+
+  "Content Marketing": {
+    "category": "Digital Marketing",
+    "description": "Creating useful content to attract and engage an audience."
+  },
+
+  "Google Analytics": {
+    "category": "Digital Marketing",
+    "description": "Tool used to analyze website and digital product traffic."
+  },
+
+  "Email Marketing": {
+    "category": "Digital Marketing",
+    "description": "Using email campaigns to communicate with and engage audiences."
+  },
+
+  "Copywriting": {
+    "category": "Digital Marketing",
+    "description": "Writing persuasive content for marketing and advertising."
+  },
+
+  "Communication": {
+    "category": "Soft Skills",
+    "description": "Ability to communicate ideas clearly and effectively."
+  },
+
+  "Clinical Research": {
+    "category": "Healthcare",
+    "description": "Research involving the safety and effectiveness of medical treatments."
+  },
+
+  "Clinical Trials": {
+    "category": "Healthcare",
+    "description": "Structured studies used to evaluate medical treatments and interventions."
+  },
+
+  "Good Clinical Practice": {
+    "category": "Healthcare",
+    "description": "International ethical and scientific quality standards for clinical research."
+  },
+
+  "Medical Terminology": {
+    "category": "Healthcare",
+    "description": "Standard vocabulary used to describe medical concepts and procedures."
+  },
+
+  "Data Management": {
+    "category": "Data",
+    "description": "Collecting, organizing, maintaining, and processing data."
+  },
+
+  "Regulatory Documentation": {
+    "category": "Healthcare",
+    "description": "Documentation required to meet regulatory and compliance requirements."
+  },
+
+  "Pharmacology": {
+    "category": "Healthcare",
+    "description": "Study of drugs, their effects, mechanisms, and interactions."
+  }
+}
