@@ -26,8 +26,37 @@ export default function ProgressPage() {
 
   const [message, setMessage] = useState("");
 
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // --------------------------------------------------
+  // REFRESH WHEN ACTIVE USER CHANGES
+  // --------------------------------------------------
+
+  useEffect(() => {
+    function handleProfileUpdated() {
+      setRefreshKey((value) => value + 1);
+    }
+
+    window.addEventListener(
+      "profileUpdated",
+      handleProfileUpdated
+    );
+
+    return () => {
+      window.removeEventListener(
+        "profileUpdated",
+        handleProfileUpdated
+      );
+    };
+  }, []);
+
   useEffect(() => {
     async function loadProgress() {
+      setLoading(true);
+      setMessage("");
+      setData(null);
+      setCompletedSkills([]);
+
       try {
         const selectedJob = localStorage.getItem("selectedJob");
 
@@ -140,7 +169,7 @@ export default function ProgressPage() {
     }
 
     loadProgress();
-  }, []);
+  }, [refreshKey]);
 
   async function toggleSkill(skill: string) {
     const willBeCompleted =
@@ -264,7 +293,6 @@ export default function ProgressPage() {
       {/* Header */}
 
       <section>
-
         <p className="text-sm font-medium text-blue-700">
           PROGRESS TRACKER
         </p>

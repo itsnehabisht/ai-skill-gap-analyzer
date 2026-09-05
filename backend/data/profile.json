@@ -1,0 +1,16 @@
+{
+    "user_id": "USR-EFD56AFE",
+    "name": "neha",
+    "education": "BCA",
+    "experience_years": 0,
+    "skills": [
+        "CSS",
+        "Git",
+        "HTML",
+        "JavaScript",
+        "Machine Learning",
+        "Python",
+        "SQL"
+    ],
+    "selected_job": "frontend_developer"
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function ResumePage() {
   const [file, setFile] = useState<File | null>(null);
@@ -8,6 +8,67 @@ export default function ResumePage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [extractedSkills, setExtractedSkills] = useState<string[]>([]);
+  const [loadingSkills, setLoadingSkills] = useState(true);
+
+  // --------------------------------------------------------
+  // Load the currently active user's saved resume skills.
+  //
+  // This is important when a previous user is restored.
+  // Their skills are already stored in profile.json, so the
+  // Resume page should display them without requiring another
+  // resume upload.
+  // --------------------------------------------------------
+
+  async function loadSavedSkills() {
+    try {
+      setLoadingSkills(true);
+
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/resume/skills",
+        {
+          cache: "no-store",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        setError(data.error || "Could not load saved resume skills.");
+        return;
+      }
+
+      setExtractedSkills(
+        data.skills || []
+      );
+
+    } catch (error) {
+      console.error("Load resume skills error:", error);
+    } finally {
+      setLoadingSkills(false);
+    }
+  }
+
+  useEffect(() => {
+    loadSavedSkills();
+
+    // Reload skills whenever another page restores or updates
+    // the active user's resume data.
+    function handleResumeSkillsUpdated() {
+      loadSavedSkills();
+    }
+
+    window.addEventListener(
+      "resumeSkillsUpdated",
+      handleResumeSkillsUpdated
+    );
+
+    return () => {
+      window.removeEventListener(
+        "resumeSkillsUpdated",
+        handleResumeSkillsUpdated
+      );
+    };
+  }, []);
 
   async function handleUpload() {
     if (!file) {
@@ -198,7 +259,9 @@ export default function ResumePage() {
       )}
 
 
-      {extractedSkills.length > 0 && (
+      {/* Saved / extracted skills */}
+
+      {!loadingSkills && extractedSkills.length > 0 && (
         <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
 
           <h2 className="text-lg font-semibold">
@@ -219,6 +282,23 @@ export default function ResumePage() {
               </span>
             ))}
           </div>
+
+        </section>
+      )}
+
+
+      {/* No saved skills */}
+
+      {!loadingSkills && extractedSkills.length === 0 && !file && (
+        <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
+
+          <h2 className="text-lg font-semibold">
+            No resume skills yet
+          </h2>
+
+          <p className="mt-1 text-sm text-zinc-500">
+            Upload a resume to automatically extract your skills.
+          </p>
 
         </section>
       )}

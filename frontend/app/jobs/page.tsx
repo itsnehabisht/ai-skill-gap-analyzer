@@ -39,19 +39,66 @@ export default function JobsPage() {
 
         setJobs(data);
 
-        // Remember which job was already chosen, if any,
-        // so the page reflects it when you come back.
+        // --------------------------------------------------
+        // First check the backend for the active user's
+        // selected career.
+        // --------------------------------------------------
+
+        try {
+          const profileResponse = await fetch(
+            "http://127.0.0.1:8000/api/profile",
+            {
+              cache: "no-store",
+            }
+          );
+
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+
+            const backendSelectedJob =
+              profileData.profile?.selected_job;
+
+            if (
+              backendSelectedJob &&
+              data[backendSelectedJob]
+            ) {
+              setSelectedJobId(backendSelectedJob);
+              localStorage.setItem(
+                "selectedJob",
+                backendSelectedJob
+              );
+              return;
+            }
+          }
+        } catch (profileError) {
+          console.error(
+            "Could not load saved career:",
+            profileError
+          );
+        }
+
+        // --------------------------------------------------
+        // Fallback to localStorage for compatibility with
+        // existing sessions.
+        // --------------------------------------------------
+
         const alreadySelected =
           localStorage.getItem("selectedJob");
 
-        if (alreadySelected) {
+        if (
+          alreadySelected &&
+          data[alreadySelected]
+        ) {
           setSelectedJobId(alreadySelected);
         }
+
       } catch (error) {
         console.error(error);
+
         setError(
-          "Unable to load jobs. Please make sure the backend is running."
+          "Unable to load career options. Please make sure the backend is running."
         );
+
       } finally {
         setLoading(false);
       }
@@ -87,9 +134,65 @@ export default function JobsPage() {
     };
   }, []);
 
-  function selectJob(jobId: string) {
-    localStorage.setItem("selectedJob", jobId);
+  async function selectJob(jobId: string) {
+    // --------------------------------------------------
+    // Save locally so the existing UI remains responsive.
+    // --------------------------------------------------
+
+    localStorage.setItem(
+      "selectedJob",
+      jobId
+    );
+
     setSelectedJobId(jobId);
+
+    // --------------------------------------------------
+    // Also save the selected career to the active user's
+    // backend profile so it can be restored later.
+    // --------------------------------------------------
+
+    try {
+      const profileResponse = await fetch(
+        "http://127.0.0.1:8000/api/profile",
+        {
+          cache: "no-store",
+        }
+      );
+
+      if (!profileResponse.ok) {
+        return;
+      }
+
+      const profileData = await profileResponse.json();
+      const profile = profileData.profile;
+
+      if (!profile) {
+        return;
+      }
+
+      await fetch(
+        "http://127.0.0.1:8000/api/profile",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: profile.name,
+            education: profile.education,
+            experience_years: profile.experience_years,
+            skills: profile.skills || [],
+            selected_job: jobId,
+          }),
+        }
+      );
+
+    } catch (error) {
+      console.error(
+        "Could not save selected career:",
+        error
+      );
+    }
   }
 
   if (loading) {

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 import Sidebar from "../components/Sidebar";
-import BunnyGuide from "../components/BunnyGuide";
 
 export const metadata: Metadata = {
   title: "SkillGap AI",
@@ -32,11 +31,6 @@ export default function RootLayout({
           </div>
 
         </main>
-
-
-        {/* Bunny assistant */}
-
-        <BunnyGuide />
 
       </body>
     </html>

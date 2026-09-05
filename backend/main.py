@@ -2,6 +2,7 @@ import sys
 import json
 import io
 import csv
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -13,7 +14,6 @@ if str(PROJECT_ROOT) not in sys.path:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
 from fastapi import UploadFile, File
 
 from ml.predict import predict_job_readiness
@@ -60,7 +60,6 @@ SKILLS_PATH = BASE_DIR / "data" / "skills.json"
 PROFILE_PATH = BASE_DIR / "data" / "profile.json"
 PROGRESS_PATH = BASE_DIR / "data" / "progress.json"
 
-# Historical users are stored here as CSV records.
 USERS_HISTORY_PATH = BASE_DIR / "data" / "users_history.csv"
 
 
@@ -160,15 +159,249 @@ def save_progress(progress):
 
 
 # ============================================================
+# USER ID
+# ============================================================
+
+def create_user_id():
+    """
+    Create a unique user ID.
+    """
+
+    return f"USR-{uuid.uuid4().hex[:8].upper()}"
+
+
+def get_or_create_user_id(profile):
+    """
+    Return the existing user ID.
+
+    If the profile does not have a user ID yet,
+    create a new unique ID and add it to the profile.
+    """
+
+    user_id = profile.get("user_id")
+
+    if user_id:
+        return user_id
+
+    user_id = create_user_id()
+
+    profile["user_id"] = user_id
+
+    return user_id
+
+
+# ============================================================
 # HISTORICAL USER STORAGE
 # ============================================================
 
+HISTORY_FIELDNAMES = [
+    "user_id",
+    "archived_at",
+    "name",
+    "education",
+    "experience_years",
+    "skills",
+    "completed_skills",
+    "selected_job",
+]
+
+
+def normalize_history_row(row):
+    """
+    Convert a CSV row into the format used by the application.
+
+    Also supports older history records that do not yet
+    contain user_id or selected_job.
+    """
+
+    user_id = (row.get("user_id") or "").strip()
+
+    if not user_id:
+        user_id = create_user_id()
+
+    experience = row.get(
+        "experience_years",
+        "0"
+    )
+
+    try:
+        experience = int(experience)
+    except (TypeError, ValueError):
+        experience = 0
+
+    skills = [
+        skill.strip()
+        for skill in (row.get("skills") or "").split(",")
+        if skill.strip()
+    ]
+
+    completed_skills = [
+        skill.strip()
+        for skill in (row.get("completed_skills") or "").split(",")
+        if skill.strip()
+    ]
+
+    selected_job = (
+        row.get("selected_job") or ""
+    ).strip()
+
+    return {
+        "user_id": user_id,
+        "archived_at": row.get(
+            "archived_at",
+            ""
+        ),
+        "name": row.get(
+            "name",
+            ""
+        ),
+        "education": row.get(
+            "education",
+            ""
+        ),
+        "experience_years": experience,
+        "skills": skills,
+        "completed_skills": completed_skills,
+        "selected_job": selected_job or None,
+    }
+
+
+def read_raw_history_rows():
+    """
+    Read the raw CSV rows.
+
+    This is separated from read_user_history()
+    so old CSV files can be migrated safely.
+    """
+
+    if not USERS_HISTORY_PATH.exists():
+        return [], []
+
+    try:
+        with open(
+            USERS_HISTORY_PATH,
+            "r",
+            newline="",
+            encoding="utf-8"
+        ) as file:
+
+            reader = csv.DictReader(file)
+
+            fieldnames = reader.fieldnames or []
+            rows = list(reader)
+
+        return fieldnames, rows
+
+    except (OSError, csv.Error):
+        return [], []
+
+
+def migrate_history_file():
+    """
+    Make sure users_history.csv uses the current schema.
+
+    Older versions did not store user_id or selected_job.
+
+    Missing IDs are permanently generated and written back
+    so they remain stable.
+
+    Missing selected_job values are stored as empty values.
+    """
+
+    if not USERS_HISTORY_PATH.exists():
+        return
+
+    fieldnames, raw_rows = read_raw_history_rows()
+
+    if not raw_rows and not fieldnames:
+        return
+
+    needs_migration = (
+        fieldnames != HISTORY_FIELDNAMES
+        or any(
+            not (row.get("user_id") or "").strip()
+            for row in raw_rows
+        )
+        or any(
+            "selected_job" not in row
+            for row in raw_rows
+        )
+    )
+
+    if not needs_migration:
+        return
+
+    users = [
+        normalize_history_row(row)
+        for row in raw_rows
+    ]
+
+    USERS_HISTORY_PATH.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    temp_path = USERS_HISTORY_PATH.with_suffix(
+        ".csv.tmp"
+    )
+
+    try:
+        with open(
+            temp_path,
+            "w",
+            newline="",
+            encoding="utf-8"
+        ) as file:
+
+            writer = csv.DictWriter(
+                file,
+                fieldnames=HISTORY_FIELDNAMES
+            )
+
+            writer.writeheader()
+
+            for user in users:
+
+                writer.writerow({
+                    "user_id": user["user_id"],
+                    "archived_at": user["archived_at"],
+                    "name": user["name"],
+                    "education": user["education"],
+                    "experience_years": user[
+                        "experience_years"
+                    ],
+                    "skills": ", ".join(
+                        user["skills"]
+                    ),
+                    "completed_skills": ", ".join(
+                        user["completed_skills"]
+                    ),
+                    "selected_job": user[
+                        "selected_job"
+                    ] or ""
+                })
+
+        temp_path.replace(USERS_HISTORY_PATH)
+
+    except OSError:
+
+        if temp_path.exists():
+            temp_path.unlink()
+
+
 def archive_current_user():
     """
-    Save the current user's profile and progress
-    into users_history.csv before starting a new user.
+    Save the current user's complete state into
+    users_history.csv before starting or restoring
+    another user.
 
-    The CSV keeps one row per previous user.
+    Stored information:
+
+    - user_id
+    - profile
+    - resume skills
+    - selected career
+    - learning progress
     """
 
     profile = load_profile()
@@ -178,12 +411,22 @@ def archive_current_user():
 
     progress = load_progress()
 
+    user_id = get_or_create_user_id(profile)
+
+    # Save the ID to the active profile.
+    save_profile(profile)
+
     USERS_HISTORY_PATH.parent.mkdir(
         parents=True,
         exist_ok=True
     )
 
+    # Migrate older history files before appending.
+    migrate_history_file()
+
     file_exists = USERS_HISTORY_PATH.exists()
+
+    fieldnames = HISTORY_FIELDNAMES
 
     with open(
         USERS_HISTORY_PATH,
@@ -194,35 +437,55 @@ def archive_current_user():
 
         writer = csv.DictWriter(
             file,
-            fieldnames=[
-                "archived_at",
-                "name",
-                "education",
-                "experience_years",
-                "skills",
-                "completed_skills"
-            ]
+            fieldnames=fieldnames
         )
 
-        if not file_exists:
+        if (
+            not file_exists
+            or USERS_HISTORY_PATH.stat().st_size == 0
+        ):
             writer.writeheader()
 
         writer.writerow({
+            "user_id": user_id,
+
             "archived_at": datetime.now().isoformat(
                 timespec="seconds"
             ),
-            "name": profile.get("name", ""),
-            "education": profile.get("education", ""),
+
+            "name": profile.get(
+                "name",
+                ""
+            ),
+
+            "education": profile.get(
+                "education",
+                ""
+            ),
+
             "experience_years": profile.get(
                 "experience_years",
                 0
             ),
+
             "skills": ", ".join(
-                profile.get("skills", [])
+                profile.get(
+                    "skills",
+                    []
+                )
             ),
+
             "completed_skills": ", ".join(
-                progress.get("completed_skills", [])
-            )
+                progress.get(
+                    "completed_skills",
+                    []
+                )
+            ),
+
+            "selected_job": profile.get(
+                "selected_job",
+                ""
+            ) or ""
         })
 
     return True
@@ -240,6 +503,31 @@ def clear_current_user():
     save_progress({
         "completed_skills": []
     })
+
+
+def read_user_history():
+    """
+    Read all archived users from users_history.csv.
+
+    Old records are migrated first so their user IDs
+    remain stable between history and restore requests.
+    """
+
+    if not USERS_HISTORY_PATH.exists():
+        return []
+
+    migrate_history_file()
+
+    _, raw_rows = read_raw_history_rows()
+
+    users = []
+
+    for row in raw_rows:
+        users.append(
+            normalize_history_row(row)
+        )
+
+    return users
 
 
 # ============================================================
@@ -272,14 +560,20 @@ class StudentProfile(BaseModel):
     experience_years: int = Field(ge=0, le=50)
 
     # Skills are extracted from the resume.
-    # They are optional here so the Profile page
-    # does not need to manually collect skills.
     skills: list[str] = []
+
+    # Selected career is stored so it can be restored
+    # when switching back to a previous user.
+    selected_job: str | None = None
 
 
 class ProgressRequest(BaseModel):
     skill: str
     completed: bool
+
+
+class RestoreUserRequest(BaseModel):
+    user_id: str
 
 
 # ============================================================
@@ -418,7 +712,10 @@ async def upload_resume(file: UploadFile = File(...)):
 
     except Exception:
         return {
-            "error": "Could not read this PDF. Please try a different file."
+            "error": (
+                "Could not read this PDF. "
+                "Please try a different file."
+            )
         }
 
     if not resume_text.strip():
@@ -432,16 +729,11 @@ async def upload_resume(file: UploadFile = File(...)):
 
     if profile is None:
         return {
-            "error": "Please create your profile before uploading a resume."
+            "error": (
+                "Please create your profile "
+                "before uploading a resume."
+            )
         }
-
-    # --------------------------------------------------------
-    # IMPORTANT:
-    # Resume skills are now the canonical skill source.
-    #
-    # We REPLACE the previous extracted skill list instead
-    # of merging it with manually selected profile skills.
-    # --------------------------------------------------------
 
     profile["skills"] = sorted(
         set(extracted_skills)
@@ -470,7 +762,10 @@ def get_resume_skills():
             "skills": []
         }
 
-    skills = profile.get("skills", [])
+    skills = profile.get(
+        "skills",
+        []
+    )
 
     return {
         "skills": skills,
@@ -485,31 +780,55 @@ def get_resume_skills():
 @app.post("/api/profile")
 def create_profile(profile: StudentProfile):
 
-    # --------------------------------------------------------
     # Keep previously extracted resume skills.
-    #
-    # The Profile page only collects:
-    # name, education and experience.
-    #
-    # Saving the profile must NOT erase skills that were
-    # already extracted from the resume.
-    # --------------------------------------------------------
-
     existing_profile = load_profile()
 
     existing_skills = []
+    existing_user_id = None
+    existing_selected_job = None
 
     if existing_profile is not None:
+
         existing_skills = existing_profile.get(
             "skills",
             []
         )
 
+        existing_user_id = existing_profile.get(
+            "user_id"
+        )
+
+        existing_selected_job = existing_profile.get(
+            "selected_job"
+        )
+
+    # Existing users keep their ID.
+    # A genuinely new profile gets a new ID.
+    user_id = existing_user_id
+
+    if not user_id:
+        user_id = create_user_id()
+
+    # --------------------------------------------------------
+    # IMPORTANT:
+    # Profile page does not send selected_job.
+    #
+    # Therefore, if selected_job is missing from the request,
+    # preserve the already selected career.
+    # --------------------------------------------------------
+
+    selected_job = profile.selected_job
+
+    if selected_job is None:
+        selected_job = existing_selected_job
+
     profile_data = {
+        "user_id": user_id,
         "name": profile.name,
         "education": profile.education,
         "experience_years": profile.experience_years,
-        "skills": existing_skills
+        "skills": existing_skills,
+        "selected_job": selected_job
     }
 
     save_profile(profile_data)
@@ -555,14 +874,6 @@ def switch_user():
 
     archived = archive_current_user()
 
-    # --------------------------------------------------------
-    # IMPORTANT:
-    # Archive first, then clear the active user's data.
-    #
-    # This prevents the current user's information from
-    # being lost when starting a new user's session.
-    # --------------------------------------------------------
-
     clear_current_user()
 
     return {
@@ -575,6 +886,7 @@ def switch_user():
         "archived": archived
     }
 
+
 # ============================================================
 # PREVIOUS USERS / USER HISTORY
 # ============================================================
@@ -582,69 +894,92 @@ def switch_user():
 @app.get("/api/users/history")
 def get_user_history():
 
-    if not USERS_HISTORY_PATH.exists():
+    users = read_user_history()
+
+    return {
+        "users": users
+    }
+
+
+# ============================================================
+# RESTORE PREVIOUS USER
+# ============================================================
+
+@app.post("/api/users/restore")
+def restore_user(request: RestoreUserRequest):
+
+    users = read_user_history()
+
+    selected_user = None
+
+    # Find the requested previous user by stable ID.
+    for user in users:
+
+        if user["user_id"] == request.user_id:
+            selected_user = user
+            break
+
+    if selected_user is None:
         return {
-            "users": []
+            "error": "Previous user not found."
         }
 
-    try:
-        with open(
-            USERS_HISTORY_PATH,
-            "r",
-            newline="",
-            encoding="utf-8"
-        ) as file:
+    # --------------------------------------------------------
+    # Archive the currently active user before switching.
+    # --------------------------------------------------------
 
-            reader = csv.DictReader(file)
+    current_profile = load_profile()
 
-            users = []
+    if current_profile is not None:
 
-            for row in reader:
-                users.append({
-                    "archived_at": row.get(
-                        "archived_at",
-                        ""
-                    ),
-                    "name": row.get(
-                        "name",
-                        ""
-                    ),
-                    "education": row.get(
-                        "education",
-                        ""
-                    ),
-                    "experience_years": row.get(
-                        "experience_years",
-                        "0"
-                    ),
-                    "skills": [
-                        skill.strip()
-                        for skill in row.get(
-                            "skills",
-                            ""
-                        ).split(",")
-                        if skill.strip()
-                    ],
-                    "completed_skills": [
-                        skill.strip()
-                        for skill in row.get(
-                            "completed_skills",
-                            ""
-                        ).split(",")
-                        if skill.strip()
-                    ]
-                })
+        current_user_id = current_profile.get(
+            "user_id"
+        )
 
-        return {
-            "users": users
-        }
+        if current_user_id != selected_user["user_id"]:
+            archive_current_user()
 
-    except (OSError, csv.Error):
-        return {
-            "error": "Could not read user history."
-        }
+    # --------------------------------------------------------
+    # Restore selected user's COMPLETE profile.
+    # --------------------------------------------------------
 
-    
+    restored_profile = {
+        "user_id": selected_user["user_id"],
+        "name": selected_user["name"],
+        "education": selected_user["education"],
+        "experience_years": selected_user[
+            "experience_years"
+        ],
+        "skills": selected_user["skills"],
+        "selected_job": selected_user.get(
+            "selected_job"
+        )
+    }
+
+    save_profile(restored_profile)
+
+    # --------------------------------------------------------
+    # Restore selected user's learning progress.
+    # --------------------------------------------------------
+
+    restored_progress = {
+        "completed_skills": selected_user[
+            "completed_skills"
+        ]
+    }
+
+    save_progress(restored_progress)
+
+    return {
+        "message": (
+            f"User '{selected_user['name']}' "
+            "restored successfully."
+        ),
+        "profile": restored_profile,
+        "progress": restored_progress
+    }
+
+
 # ============================================================
 # PROGRESS
 # ============================================================
@@ -670,7 +1005,9 @@ def update_progress(request: ProgressRequest):
     if request.completed:
 
         if request.skill not in completed_skills:
-            completed_skills.append(request.skill)
+            completed_skills.append(
+                request.skill
+            )
 
     else:
 

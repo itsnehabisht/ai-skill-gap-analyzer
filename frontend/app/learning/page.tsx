@@ -28,9 +28,37 @@ export default function LearningPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [completed, setCompleted] = useState<string[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // --------------------------------------------------
+  // REFRESH WHEN ACTIVE USER CHANGES
+  // --------------------------------------------------
+
+  useEffect(() => {
+    function handleProfileUpdated() {
+      setRefreshKey((value) => value + 1);
+    }
+
+    window.addEventListener(
+      "profileUpdated",
+      handleProfileUpdated
+    );
+
+    return () => {
+      window.removeEventListener(
+        "profileUpdated",
+        handleProfileUpdated
+      );
+    };
+  }, []);
 
   useEffect(() => {
     async function loadRecommendations() {
+      setLoading(true);
+      setMessage("");
+      setData(null);
+      setCompleted([]);
+
       try {
         const selectedJob = localStorage.getItem("selectedJob");
 
@@ -129,7 +157,7 @@ export default function LearningPage() {
     }
 
     loadRecommendations();
-  }, []);
+  }, [refreshKey]);
 
   async function toggleSkill(skill: string) {
     const willBeCompleted = !completed.includes(skill);
@@ -164,7 +192,6 @@ export default function LearningPage() {
       const result = await response.json();
 
       setCompleted(result.completed_skills || []);
-
     } catch (error) {
       console.error("Progress update error:", error);
       setCompleted(previous);
@@ -276,7 +303,6 @@ export default function LearningPage() {
             </p>
           </div>
 
-
           {/* Bunny */}
 
           <div className="shrink-0">
@@ -298,7 +324,6 @@ export default function LearningPage() {
         </div>
 
       </section>
-
 
       {/* ========================================================= */}
       {/* PROGRESS */}
@@ -333,9 +358,7 @@ export default function LearningPage() {
 
           </div>
 
-
           <div className="text-left md:text-right">
-
             {progressPercentage === 100 ? (
               <>
                 <p className="text-2xl">🎉</p>
@@ -366,7 +389,6 @@ export default function LearningPage() {
 
         </div>
 
-
         <div className="mt-6 h-4 overflow-hidden rounded-full bg-slate-200">
 
           <div
@@ -379,7 +401,6 @@ export default function LearningPage() {
         </div>
 
       </section>
-
 
       {/* ========================================================= */}
       {/* BUNNY MESSAGE */}
@@ -413,7 +434,6 @@ export default function LearningPage() {
 
       </section>
 
-
       {/* ========================================================= */}
       {/* RECOMMENDATIONS */}
       {/* ========================================================= */}
@@ -436,7 +456,6 @@ export default function LearningPage() {
 
         </div>
 
-
         <div className="space-y-6">
 
           {data.recommendations.map(
@@ -445,6 +464,7 @@ export default function LearningPage() {
               const isCompleted = completed.includes(
                 recommendation.skill
               );
+
               return (
                 <article
                   key={recommendation.skill}
@@ -474,7 +494,6 @@ export default function LearningPage() {
                           ? "✓"
                           : String(index + 1).padStart(2, "0")}
                       </div>
-
 
                       {/* Main */}
 
@@ -510,11 +529,9 @@ export default function LearningPage() {
 
                         </div>
 
-
                         <p className="mt-4 max-w-3xl leading-7 text-slate-600">
                           {recommendation.description}
                         </p>
-
 
                         {/* ================================================= */}
                         {/* WHAT TO LEARN */}
@@ -533,7 +550,6 @@ export default function LearningPage() {
                             </h3>
 
                           </div>
-
 
                           <div className="mt-4 grid gap-3 sm:grid-cols-2">
 
@@ -562,7 +578,6 @@ export default function LearningPage() {
 
                         </div>
 
-
                         {/* ================================================= */}
                         {/* WHERE TO STUDY */}
                         {/* ================================================= */}
@@ -589,7 +604,6 @@ export default function LearningPage() {
                                 learn this skill.
                               </p>
 
-
                               <div className="mt-4 grid gap-3 sm:grid-cols-2">
 
                                 {recommendation.resources.map(
@@ -602,7 +616,6 @@ export default function LearningPage() {
                                       rel="noopener noreferrer"
                                       className="group rounded-2xl border border-violet-100 bg-slate-100 p-4 transition hover:border-blue-200 hover:bg-blue-600/5"
                                     >
-
                                       <div className="flex items-center justify-between gap-3">
 
                                         <div>
@@ -633,7 +646,6 @@ export default function LearningPage() {
                             </div>
 
                           )}
-
 
                         {/* ================================================= */}
                         {/* PRACTICE */}
@@ -666,7 +678,6 @@ export default function LearningPage() {
 
                         )}
 
-
                         {/* ================================================= */}
                         {/* COMPLETE BUTTON */}
                         {/* ================================================= */}
@@ -684,7 +695,6 @@ export default function LearningPage() {
                             </p>
 
                           </div>
-
 
                           <button
                             onClick={() =>
@@ -719,7 +729,6 @@ export default function LearningPage() {
         </div>
 
       </section>
-
 
       {/* ========================================================= */}
       {/* FINAL MOTIVATION */}

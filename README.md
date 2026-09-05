@@ -1,216 +1,70 @@
-# 🎯 AI-Skill-Gap-Analyzer
+# 🎯 SkillGap AI
 
-Skill Gap Analyzer is a full-stack web application that analyzes a user's resume, compares their skills with the requirements of different career paths, identifies missing skills, predicts job readiness using Machine Learning, and provides personalized learning recommendations.
+> **AI skill gap analyzer that helps students understand their job readiness, identify missing skills, and build a personalized learning roadmap.**
 
-> 🚀 Built as a personal portfolio project using Python, FastAPI, Next.js, and Machine Learning.
+SkillGap AI analyzes a student's profile and resume, compares their skills with the requirements of a selected career, identifies skill gaps, predicts job readiness using machine learning, and recommends what to learn next.
 
 ---
 
 ## ✨ Features
 
-### 📄 Resume Skill Extraction
-- Upload your resume as a PDF.
-- Automatically extract relevant technical and professional skills.
-- Extracted skills become the main source for the rest of the application.
-
-### 👤 User Profile
-- Enter your name.
-- Select your course / education.
-- Enter years of experience.
-- No manual skill selection is required.
-
-### 💼 Career Selection
-Choose from multiple career paths, including:
-
-- Data Scientist
-- Data Analyst
-- Machine Learning Engineer
-- AI Engineer
-- Data Engineer
-- Business Intelligence Analyst
-- Frontend Developer
-- Backend Developer
-- Full Stack Developer
-- Software Developer
-- UI/UX Designer
-- QA Software Tester
-- Business Analyst
-- Digital Marketing Specialist
-- Marketing Analyst
-- HR Analyst
-- Financial Analyst
-- Clinical Research Associate
-- Pharmacovigilance Associate
-- Regulatory Affairs Associate
-- Medical Writer
-- Quality Assurance – Pharma
-
-### 🧠 AI Skill Gap Analysis
-The application compares the skills extracted from the resume with the skills required for the selected career.
-
-It identifies:
-
-- ✅ Skills you already have
-- ⚠️ Skills you are missing
-- 📊 Overall skill match percentage
-- 🎯 Job readiness score
-
-### 🤖 Machine Learning Prediction
-
-SkillGap AI uses a **Random Forest Regression** model to predict job readiness.
-
-The model considers factors such as:
-
-- Skill match percentage
-- Experience
-- Education level
-- Technical skills
-
-### 📚 Personalized Learning Recommendations
-Missing skills are converted into learning recommendations so users know what to learn next.
-
-### 📈 Progress Tracking
-Users can:
-
-- Track learning progress
-- Mark skills as completed
-- View completed and remaining skills
-- Monitor their improvement
-
-### 📊 Dashboard
-The dashboard provides an overview of:
-
-- Profile information
-- Selected career
-- Skills
-- Skill gap
-- Job readiness
-- Learning progress
-
-### 📑 Career Report
-The Reports section provides a summary of:
-
-- Candidate profile
-- Selected career
-- Current skills
-- Missing skills
-- Skill match
-- Job readiness
-- Learning progress
-
-### 👥 Previous Users
-SkillGap AI supports switching between users.
-
-When a new user is started:
-
-- The current user's profile is archived.
-- Previous user information is stored in `users_history.csv`.
-- The current profile is cleared.
-- Learning progress is reset.
+- 👤 **Student Profile** — Manage name, education/course, and experience.
+- 📄 **Resume Skill Extraction** — Upload a PDF resume and automatically extract relevant skills.
+- 💼 **Career Selection** — Choose from multiple career/job roles with different skill requirements.
+- 🎯 **Skill Gap Analysis** — Compare resume skills with the selected job's required skills.
+- 🤖 **ML Job Readiness Prediction** — Predict job readiness using a trained Random Forest regression model.
+- 📚 **Personalized Learning Recommendations** — Get recommendations based on identified skill gaps.
+- 📈 **Progress Tracking** — Track completed skills and learning progress.
+- 📊 **Interactive Dashboard** — View readiness, skill match, gaps, recommendations, and progress in one place.
+- 📑 **Career Report** — Generate a consolidated career-readiness report.
+- 👥 **Previous Users** — Create/switch users and restore saved profile, resume skills, selected career, and progress data.
+- 🎨 **Responsive UI** — Clean and student-friendly interface designed for an engaging career-planning experience.
 
 ---
 
-## 🔄 How It Works
-
-```text
-Resume Upload
-      ↓
-PDF Skill Extraction
-      ↓
-User Profile
-      ↓
-Select Career
-      ↓
-Compare Resume Skills
-      ↓
-Skill Gap Analysis
-      ↓
-Machine Learning Prediction
-      ↓
-Job Readiness Score
-      ↓
-Learning Recommendations
-      ↓
-Progress Tracking
-      ↓
-Career Report
-````
-
----
-
-## 🤖 Machine Learning
-
-SkillGap AI includes a Machine Learning component to predict job readiness.
-
-### Model
-
-**RandomForestRegressor**
-
-### Dataset
-
-The project uses a generated dataset containing:
-
-* 300 rows
-* 12 columns
-
-### Model Performance
-
-| Metric              | Result |
-| ------------------- | -----: |
-| Mean Absolute Error | 3.4558 |
-| R² Score            | 0.8644 |
-
-### Important Features
-
-| Feature                |       Importance |
-| ---------------------- | ---------------: |
-| Skill Match Percentage |           ~0.581 |
-| Experience Years       |           ~0.289 |
-| Education Level        |           ~0.077 |
-| Other Skills           | Lower importance |
-
-The model is trained using the data in:
-
-```text
-ml/data/skill_gap_data.csv
-```
-
-The trained model is stored at:
-
-```text
-ml/models/job_readiness_model.joblib
-```
-
----
-
-## 🏗️ System Architecture
+## 🧠 How It Works
 
 ```text
                     ┌─────────────────────┐
-                    │     Next.js UI      │
-                    │      Frontend       │
+                    │    Student Profile  │
+                    │ Name • Education    │
+                    │ Experience          │
                     └──────────┬──────────┘
                                │
-                               │ HTTP / REST API
-                               ↓
+                               ▼
                     ┌─────────────────────┐
-                    │      FastAPI        │
-                    │       Backend       │
-                    └───────┬─────┬───────┘
-                            │     │
-                ┌───────────┘     └────────────┐
-                ↓                              ↓
-      ┌─────────────────┐            ┌─────────────────┐
-      │  Skill Analysis │            │ Machine Learning│
-      │      Logic      │            │ Random Forest   │
-      └─────────────────┘            └─────────────────┘
-                │                              │
-                └──────────────┬───────────────┘
-                               ↓
+                    │    Resume Upload    │
+                    │   PDF Skill         │
+                    │   Extraction        │
+                    └──────────┬──────────┘
+                               │
+                               ▼
                     ┌─────────────────────┐
-                    │ JSON / CSV Storage  │
+                    │    Career Selection │
+                    │    Target Job Role  │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+              ┌─────────────────────────────────┐
+              │        Skill Gap Analysis       │
+              │ Resume Skills ↔ Job Requirements│
+              └───────────────┬─────────────────┘
+                              │
+                ┌─────────────┴─────────────┐
+                ▼                           ▼
+      ┌───────────────────┐       ┌───────────────────┐
+      │ Machine Learning  │       │ Recommendation    │
+      │ Job Readiness     │       │ & Learning Roadmap│
+      └─────────┬─────────┘       └─────────┬─────────┘
+                │                           │
+                └─────────────┬─────────────┘
+                              ▼
+                    ┌─────────────────────┐
+                    │     Dashboard       │
+                    │ Readiness • Gaps    │
+                    │ Progress • Report   │
                     └─────────────────────┘
-```
+````
 
 ---
 
@@ -218,38 +72,82 @@ ml/models/job_readiness_model.joblib
 
 ### Frontend
 
-* Next.js
-* React
-* TypeScript
-* Tailwind CSS
+* **Next.js 16**
+* **React 19**
+* **TypeScript**
+* **Tailwind CSS**
 
 ### Backend
 
-* Python
-* FastAPI
-* Uvicorn
-* Pydantic
+* **Python**
+* **FastAPI**
+* **Pydantic**
+* **Uvicorn**
 
 ### Machine Learning
 
-* Scikit-learn
-* Pandas
-* NumPy
-* Joblib
+* **scikit-learn**
+* **RandomForestRegressor**
+* **Pandas**
+* **Joblib**
 
-### Resume Processing
+### Data & Processing
 
-* PDF text extraction
-* Python-based skill extraction
-
-### Storage
-
-* JSON
-* CSV
+* JSON-based application state
+* CSV historical user records
+* PDF resume processing
+* Resume skill extraction
 
 ---
 
-## 📁 Project Structure
+## 🤖 Machine Learning
+
+SkillGap AI includes a machine-learning component to estimate a candidate's **job readiness score**.
+
+### Model
+
+**Random Forest Regressor**
+
+The model uses candidate-related features such as:
+
+* Python
+* SQL
+* Pandas
+* NumPy
+* Machine Learning
+* Statistics
+* Data Visualization
+* Scikit-learn
+* Experience Years
+* Education Level
+* Skill Match Percentage
+
+### Model Performance
+
+The trained model achieved:
+
+| Metric                    |       Result |
+| ------------------------- | -----------: |
+| Mean Absolute Error (MAE) |     **3.46** |
+| R² Score                  |   **0.8644** |
+| Training Dataset          | **300 rows** |
+| Input Features            |       **11** |
+
+### Important Features
+
+The strongest model features were:
+
+| Feature                | Approx. Importance |
+| ---------------------- | -----------------: |
+| Skill Match Percentage |          **0.581** |
+| Experience Years       |          **0.289** |
+| Education Level        |          **0.077** |
+
+> The model is intended as a project-level job-readiness estimation and should not be interpreted as a professional hiring assessment.
+
+---
+
+## 📂 Project Structure
 
 ```text
 ai-skill-gap-analyzer/
@@ -277,74 +175,72 @@ ai-skill-gap-analyzer/
 │   │   ├── reports/
 │   │   ├── resume/
 │   │   ├── skill-gap/
-│   │   ├── users/
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   └── page.tsx
+│   │   └── users/
 │   │
 │   └── components/
-│       ├── BunnyGuide.tsx
 │       ├── BunnyIcon.tsx
 │       ├── Header.tsx
 │       └── Sidebar.tsx
 │
 ├── ml/
 │   ├── data/
-│   │   ├── skill_gap_data.csv
-│   │   └── skill_gap_data_v1.csv
-│   │
+│   │   └── skill_gap_data.csv
 │   ├── models/
 │   │   └── job_readiness_model.joblib
-│   │
 │   ├── eda.py
 │   ├── generate_data.py
 │   ├── predict.py
-│   ├── train.py
-│   ├── requirements.txt
-│   └── __init__.py
+│   └── train.py
 │
 └── README.md
 ```
 
 ---
 
-## ⚙️ Getting Started
+## 🚀 Getting Started
 
 ### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/itsnehabisht/ai-skill-gap-analyzer.git
-```
-
-Move into the project:
-
-```bash
 cd ai-skill-gap-analyzer
 ```
 
 ---
 
-## 🐍 Backend Setup
+### 2. Backend Setup
 
-Open a terminal and run:
+Open a terminal:
 
-```cmd
-cd D:\Projects\ai-skill-gap-analyzer\backend
+```bash
+cd backend
 ```
 
-Activate the Python virtual environment:
+Create a virtual environment:
 
-```cmd
+```bash
+python -m venv venv
+```
+
+Activate it on Windows:
+
+```bash
 venv\Scripts\activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
 ```
 
 Start the FastAPI server:
 
-```cmd
+```bash
 uvicorn main:app --reload
 ```
 
-Backend will run at:
+Backend:
 
 ```text
 http://127.0.0.1:8000
@@ -358,278 +254,135 @@ http://127.0.0.1:8000/docs
 
 ---
 
-## 💻 Frontend Setup
+### 3. Frontend Setup
 
-Open a **second terminal**.
+Open a second terminal:
 
-```cmd
-cd D:\Projects\ai-skill-gap-analyzer\frontend
+```bash
+cd frontend
 ```
 
-Install dependencies if required:
+Install dependencies:
 
-```cmd
+```bash
 npm install
 ```
 
 Start the development server:
 
-```cmd
+```bash
 npm run dev
 ```
 
-Frontend will run at:
+Open the application:
 
 ```text
 http://localhost:3000
 ```
 
-> The Python virtual environment is only required for the backend. You do not need to activate it in the frontend terminal.
-
 ---
 
-## 🔌 API Endpoints
-
-### Health Check
-
-```http
-GET /health
-```
-
-Checks whether the backend is running correctly.
-
----
-
-### Student Profile
-
-```http
-POST /api/profile
-```
-
-Creates or updates the user's profile.
-
----
-
-### Resume Upload
-
-```http
-POST /api/resume
-```
-
-Uploads a PDF resume and extracts skills.
-
----
-
-### Resume Skills
-
-```http
-GET /api/resume/skills
-```
-
-Returns skills extracted from the current resume.
-
----
-
-### User Switch
-
-```http
-POST /api/users/switch
-```
-
-Archives the current user and starts a new user profile.
-
----
-
-### Previous Users
-
-```http
-GET /api/users/history
-```
-
-Returns previously archived users.
-
----
-
-## 👤 User Management
-
-SkillGap AI supports multiple users without requiring a database.
-
-When **Start New User** is selected:
+## 🔄 Typical User Flow
 
 ```text
-Current User
-     ↓
-Archive Profile + Progress
-     ↓
-Save to users_history.csv
-     ↓
-Clear Current Profile
-     ↓
-Reset Learning Progress
-     ↓
-New User
+Create Profile
+      ↓
+Upload Resume
+      ↓
+Resume Skills Extracted
+      ↓
+Select Target Career
+      ↓
+Analyze Skill Gap
+      ↓
+View Job Readiness
+      ↓
+Get Learning Recommendations
+      ↓
+Track Learning Progress
+      ↓
+Generate Career Report
 ```
 
-Previous users can be viewed from:
-
-```text
-Previous Users
-```
-
-in the sidebar.
-
 ---
 
-## 📄 Resume Analysis
+## 👥 User Management
 
-The resume workflow is:
+SkillGap AI supports multiple user profiles through its **Previous Users** functionality.
 
-```text
-Upload PDF
-    ↓
-Extract Text
-    ↓
-Identify Skills
-    ↓
-Save Skills to Profile
-    ↓
-Use Skills Across Application
-```
+When switching users, the application can preserve and restore:
 
-The extracted resume skills are used consistently by:
+* 👤 Profile information
+* 📄 Resume-extracted skills
+* 💼 Selected career
+* 📈 Completed learning skills
 
-* Skill Gap
-* Learning Recommendations
-* Progress
-* Dashboard
-* Reports
-
-This avoids requiring users to manually enter their skills.
-
----
-
-## 📊 Dashboard & Progress
-
-The dashboard provides a quick overview of the user's career readiness.
-
-Users can see:
-
-* Current skills
-* Missing skills
-* Skill match percentage
-* Job readiness
-* Learning progress
-* Selected career
-
-The Progress page allows users to track completed learning skills.
-
----
-
-## 🎨 UI Design
-
-SkillGap AI uses a clean and modern visual design focused on readability and confidence.
-
-### Design Colors
-
-| Purpose        | Color     |
-| -------------- | --------- |
-| Background     | `#F4F1FC` |
-| Cards          | `#FFFFFF` |
-| Inset Cards    | `#FBFAFE` |
-| Primary Text   | `#211D3D` |
-| Secondary Text | `#615C7A` |
-| Accent Blue    | `#4C5FEA` |
-| Accent Hover   | `#3B4AD1` |
-| Success        | `#22A366` |
-| Warning        | `#F0883E` |
-| Critical       | `#E5484D` |
-
----
-
-## 🔐 Validation & Error Handling
-
-The application includes validation for:
-
-* Resume file type
-* Resume file size
-* Profile information
-* Experience years
-* Education level
-* Skill match percentage
-* Missing backend data
-* Empty resume skills
-* API errors
-
-Resume uploads are restricted to PDF files under 5 MB.
+This allows users to return to a previous profile without rebuilding their career analysis from scratch.
 
 ---
 
 ## 📸 Screenshots
 
-### Dashboard
-![Dashboard](screenshots/dashboard.png)
+### 🏠 Dashboard
 
-### Resume Upload
+![SkillGap AI Dashboard](screenshots/dashboard.png)
+
+### 📄 Resume Upload
+
 ![Resume Upload](screenshots/resume.png)
 
-### Skill Gap Analysis
-![Skill Gap](screenshots/skill-gap.png)
+### 🎯 Skill Gap Analysis
 
-### Learning Roadmap
-![Learning](screenshots/learning.png)
-```
+![Skill Gap Analysis](screenshots/skill-gap.png)
+
+### 📚 Learning Recommendations
+
+![Learning Recommendations](screenshots/learning.png)
+
+### 📑 Career Report
+
+![Career Report](screenshots/reports.png)
 
 ---
 
-## 🚀 Future Improvements
+## 🔮 Future Improvements
 
-Possible future improvements include:
+Some possible future enhancements include:
 
-* PostgreSQL database integration
-* User authentication
-* Cloud deployment
-* More advanced NLP-based resume analysis
-* LinkedIn profile integration
-* More career paths
-* Improved recommendation algorithms
-* Personalized learning resources
-* Resume quality scoring
-* AI-powered career guidance
-* Progress analytics and visualizations
+* 🔐 User authentication and secure accounts
+* 🗄️ PostgreSQL or another production database
+* ☁️ Cloud deployment
+* 🧠 More advanced NLP-based resume parsing
+* 🎯 Improved job-role matching
+* 📊 Larger real-world training datasets
+* 📈 Personalized progress analytics
+* 🔗 Integration with learning platforms and job portals
+
+---
+
+## 🎓 Project Purpose
+
+SkillGap AI was developed as a practical **Artificial Intelligence & Data Science project** to explore how machine learning, resume processing, backend APIs, and modern web development can be combined into a real-world career guidance application.
+
+The project focuses on turning a student's existing skills into actionable career insights rather than simply displaying a list of missing skills.
 
 ---
 
 ## 👩‍💻 Author
 
 **Neha Bisht**
-
 BCA — Artificial Intelligence & Data Science
 
-GitHub:
-
-[https://github.com/itsnehabisht]
+🔗 GitHub: [@itsnehabisht](https://github.com/itsnehabisht)
 
 ---
 
-## 📌 Project Status
+## ⭐ If You Find This Project Interesting
 
-**Completed — Portfolio Project**
-
-SkillGap AI was developed to demonstrate practical skills in:
-
-* Full-stack development
-* Python
-* FastAPI
-* Next.js
-* Machine Learning
-* Resume processing
-* Data analysis
-* REST APIs
-* UI/UX design
-* Git & GitHub
+Feel free to explore the repository, try the application, and use the project as inspiration for your own AI/ML portfolio.
 
 ---
 
-## 📄 License
+## 📌 Disclaimer
 
-This project is created for educational and portfolio purposes.
+SkillGap AI is an educational and portfolio project. Its job-readiness prediction and recommendations are intended for learning and career guidance purposes and should not be considered professional recruitment or hiring advice.

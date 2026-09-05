@@ -35,15 +35,35 @@ export default function ReportsPage() {
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Refresh the report when a different user is restored.
+  useEffect(() => {
+    function handleProfileUpdated() {
+      setRefreshKey((value) => value + 1);
+    }
+
+    window.addEventListener("profileUpdated", handleProfileUpdated);
+
+    return () => {
+      window.removeEventListener(
+        "profileUpdated",
+        handleProfileUpdated
+      );
+    };
+  }, []);
 
   useEffect(() => {
     async function generateReport() {
       try {
+        setLoading(true);
+        setMessage("");
+        setReport(null);
+
         const selectedJob = localStorage.getItem("selectedJob");
 
         if (!selectedJob) {
           setMessage("Please select a target job first.");
-          setLoading(false);
           return;
         }
 
@@ -62,7 +82,6 @@ export default function ReportsPage() {
 
         if (!profileData.profile) {
           setMessage("Please complete your profile first.");
-          setLoading(false);
           return;
         }
 
@@ -178,7 +197,7 @@ export default function ReportsPage() {
     }
 
     generateReport();
-  }, []);
+  }, [refreshKey]);
 
   if (loading) {
     return (
@@ -347,7 +366,6 @@ export default function ReportsPage() {
       <section className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white/5 to-transparent p-8">
 
         <div className="flex flex-col justify-between gap-8 md:flex-row md:items-end">
-
           <div>
 
             <p className="text-sm font-medium text-blue-700">

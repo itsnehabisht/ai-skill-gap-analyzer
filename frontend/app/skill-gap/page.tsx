@@ -14,12 +14,27 @@ export default function SkillGapPage() {
   const [result, setResult] = useState<SkillGapResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Refresh skill-gap analysis when a different user is restored.
+  useEffect(() => {
+    function handleProfileUpdated() {
+      setRefreshKey((value) => value + 1);
+    }
+
+    window.addEventListener("profileUpdated", handleProfileUpdated);
+
+    return () => {
+      window.removeEventListener("profileUpdated", handleProfileUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     async function loadSkillGap() {
       try {
         setLoading(true);
         setMessage("");
+        setResult(null);
 
         const selectedJob = localStorage.getItem("selectedJob");
 
@@ -116,7 +131,7 @@ export default function SkillGapPage() {
     }
 
     loadSkillGap();
-  }, []);
+  }, [refreshKey]);
 
   if (loading) {
     return (
@@ -253,11 +268,11 @@ export default function SkillGapPage() {
           </p>
         </div>
 
-
         <div className="rounded-2xl border border-green-400/10 bg-green-400/5 p-6">
           <p className="text-sm text-green-400">
             Skills You Have
           </p>
+
           <p className="mt-3 text-4xl font-bold text-green-300">
             {result.matching_skills.length}
           </p>
