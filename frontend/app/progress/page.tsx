@@ -37,19 +37,23 @@ export default function ProgressPage() {
           return;
         }
 
-        const savedProgress =
-          localStorage.getItem(
-            `learningProgress_${selectedJob}`
-          );
+        const progressResponse = await fetch(
+          "http://127.0.0.1:8000/api/progress",
+          {
+            cache: "no-store",
+          }
+        );
 
-        if (savedProgress) {
-          setCompletedSkills(
-            JSON.parse(savedProgress)
-          );
+        if (progressResponse.ok) {
+          const progressData = await progressResponse.json();
+          setCompletedSkills(progressData.completed_skills || []);
         }
 
         const profileResponse = await fetch(
-          "http://127.0.0.1:8000/api/profile"
+          "http://127.0.0.1:8000/api/profile",
+          {
+            cache: "no-store",
+          }
         );
 
         if (!profileResponse.ok) {
@@ -69,6 +73,29 @@ export default function ProgressPage() {
           return;
         }
 
+        /*
+         * Resume-extracted skills are the source of truth.
+         * They are stored by the backend after resume analysis.
+         */
+        const skillsResponse = await fetch(
+          "http://127.0.0.1:8000/api/resume/skills",
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (!skillsResponse.ok) {
+          throw new Error(
+            "Could not load resume skills."
+          );
+        }
+
+        const skillsData =
+          await skillsResponse.json();
+
+        const resumeSkills =
+          skillsData.skills || [];
+
         const response = await fetch(
           "http://127.0.0.1:8000/api/recommendations",
           {
@@ -77,8 +104,7 @@ export default function ProgressPage() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              student_skills:
-                profileData.profile.skills,
+              student_skills: resumeSkills,
               job_id: selectedJob,
             }),
           }
@@ -103,7 +129,9 @@ export default function ProgressPage() {
         console.error(error);
 
         setMessage(
-          "We couldn't load your progress."
+          error instanceof Error
+            ? error.message
+            : "We couldn't load your progress."
         );
 
       } finally {
@@ -114,34 +142,60 @@ export default function ProgressPage() {
     loadProgress();
   }, []);
 
-  function toggleSkill(skill: string) {
-    const selectedJob =
-      localStorage.getItem("selectedJob");
+  async function toggleSkill(skill: string) {
+    const willBeCompleted =
+      !completedSkills.includes(skill);
 
-    if (!selectedJob) {
-      return;
-    }
+    const previousSkills =
+      completedSkills;
 
-    let updatedSkills: string[];
-
-    if (completedSkills.includes(skill)) {
-      updatedSkills =
-        completedSkills.filter(
-          (item) => item !== skill
-        );
-    } else {
-      updatedSkills = [
-        ...completedSkills,
-        skill,
-      ];
-    }
+    const updatedSkills =
+      willBeCompleted
+        ? [...completedSkills, skill]
+        : completedSkills.filter(
+            (item) => item !== skill
+          );
 
     setCompletedSkills(updatedSkills);
 
-    localStorage.setItem(
-      `learningProgress_${selectedJob}`,
-      JSON.stringify(updatedSkills)
-    );
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/progress",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            skill: skill,
+            completed: willBeCompleted,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Could not save progress."
+        );
+      }
+
+      const result =
+        await response.json();
+
+      setCompletedSkills(
+        result.completed_skills || []
+      );
+
+    } catch (error) {
+      console.error(
+        "Progress update error:",
+        error
+      );
+
+      setCompletedSkills(
+        previousSkills
+      );
+    }
   }
 
   if (loading) {
@@ -149,9 +203,9 @@ export default function ProgressPage() {
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
 
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-white/10 border-t-blue-400" />
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-blue-100 border-t-blue-600" />
 
-          <p className="mt-4 text-zinc-400">
+          <p className="mt-4 text-slate-600">
             Loading your progress...
           </p>
 
@@ -164,9 +218,9 @@ export default function ProgressPage() {
     return (
       <div className="mx-auto max-w-3xl">
 
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
+        <div className="rounded-3xl border border-violet-100 bg-white p-8">
 
-          <p className="text-sm font-medium text-blue-400">
+          <p className="text-sm font-medium text-blue-700">
             PROGRESS TRACKER
           </p>
 
@@ -174,7 +228,7 @@ export default function ProgressPage() {
             Your learning journey starts here.
           </h1>
 
-          <p className="mt-3 text-zinc-400">
+          <p className="mt-3 text-slate-600">
             {message}
           </p>
 
@@ -211,7 +265,7 @@ export default function ProgressPage() {
 
       <section>
 
-        <p className="text-sm font-medium text-blue-400">
+        <p className="text-sm font-medium text-blue-700">
           PROGRESS TRACKER
         </p>
 
@@ -219,7 +273,7 @@ export default function ProgressPage() {
           Your journey to {data.job_title}
         </h1>
 
-        <p className="mt-3 max-w-2xl text-zinc-400">
+        <p className="mt-3 max-w-2xl text-slate-600">
           Learn each skill, build projects, and
           check them off as you grow.
         </p>
@@ -229,13 +283,13 @@ export default function ProgressPage() {
 
       {/* Progress overview */}
 
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
+      <section className="rounded-3xl border border-violet-100 bg-white p-8">
 
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
 
           <div>
 
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-slate-500">
               Overall Learning Progress
             </p>
 
@@ -245,7 +299,7 @@ export default function ProgressPage() {
                 {progressPercentage}%
               </span>
 
-              <span className="pb-2 text-zinc-500">
+              <span className="pb-2 text-slate-500">
                 complete
               </span>
 
@@ -255,13 +309,13 @@ export default function ProgressPage() {
 
           <div className="text-left md:text-right">
 
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-slate-500">
               Skills completed
             </p>
 
             <p className="mt-1 text-2xl font-semibold">
               {completedCount}
-              <span className="text-zinc-600">
+              <span className="text-slate-500">
                 /{totalSkills}
               </span>
             </p>
@@ -273,10 +327,10 @@ export default function ProgressPage() {
 
         {/* Progress bar */}
 
-        <div className="mt-7 h-4 overflow-hidden rounded-full bg-white/10">
+        <div className="mt-7 h-4 overflow-hidden rounded-full bg-slate-200">
 
           <div
-            className="h-full rounded-full bg-blue-400 transition-all duration-700"
+            className="h-full rounded-full bg-blue-500 transition-all duration-700"
             style={{
               width: `${progressPercentage}%`,
             }}
@@ -284,7 +338,7 @@ export default function ProgressPage() {
 
         </div>
 
-        <p className="mt-4 text-sm text-zinc-500">
+        <p className="mt-4 text-sm text-slate-500">
 
           {progressPercentage === 100
             ? "Amazing! You've completed your learning roadmap. 🎉"
@@ -301,7 +355,7 @@ export default function ProgressPage() {
 
         <div className="mb-5">
 
-          <p className="text-sm font-medium text-zinc-500">
+          <p className="text-sm font-medium text-slate-500">
             YOUR LEARNING CHECKLIST
           </p>
 
@@ -327,8 +381,8 @@ export default function ProgressPage() {
                   key={recommendation.skill}
                   className={`rounded-3xl border p-6 transition ${
                     completed
-                      ? "border-green-400/20 bg-green-400/5"
-                      : "border-white/10 bg-white/5"
+                      ? "border-green-200 bg-green-50"
+                      : "border-violet-100 bg-white"
                   }`}
                 >
 
@@ -344,8 +398,8 @@ export default function ProgressPage() {
                       }
                       className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition ${
                         completed
-                          ? "border-green-400 bg-green-400 text-black"
-                          : "border-white/20 bg-black/20 hover:border-blue-400"
+                          ? "border-green-400 bg-green-500 text-black"
+                          : "border-violet-200 bg-slate-100 hover:border-blue-400"
                       }`}
                       aria-label={
                         completed
@@ -363,7 +417,7 @@ export default function ProgressPage() {
 
                       <div className="flex flex-wrap items-center gap-3">
 
-                        <span className="text-xs text-zinc-600">
+                        <span className="text-xs text-slate-500">
                           {String(index + 1).padStart(
                             2,
                             "0"
@@ -373,7 +427,7 @@ export default function ProgressPage() {
                         <h3
                           className={`text-xl font-semibold ${
                             completed
-                              ? "text-green-300 line-through"
+                              ? "text-green-700 line-through"
                               : ""
                           }`}
                         >
@@ -384,8 +438,8 @@ export default function ProgressPage() {
                           className={`rounded-full px-3 py-1 text-xs ${
                             recommendation.priority ===
                             "High"
-                              ? "bg-red-400/10 text-red-300"
-                              : "bg-yellow-400/10 text-yellow-300"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-yellow-100 text-yellow-800"
                           }`}
                         >
                           {recommendation.priority}
@@ -394,7 +448,7 @@ export default function ProgressPage() {
                       </div>
 
 
-                      <p className="mt-3 text-sm leading-6 text-zinc-400">
+                      <p className="mt-3 text-sm leading-6 text-slate-600">
                         {recommendation.description}
                       </p>
 
@@ -407,7 +461,7 @@ export default function ProgressPage() {
                           (topic) => (
                             <span
                               key={topic}
-                              className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs text-zinc-400"
+                              className="rounded-full border border-violet-100 bg-slate-100 px-3 py-1.5 text-xs text-slate-600"
                             >
                               {topic}
                             </span>
@@ -418,7 +472,7 @@ export default function ProgressPage() {
 
 
                       {completed && (
-                        <p className="mt-4 text-sm font-medium text-green-400">
+                        <p className="mt-4 text-sm font-medium text-green-700">
                           ✓ Skill completed — great work!
                         </p>
                       )}
@@ -439,9 +493,9 @@ export default function ProgressPage() {
 
       {/* Motivation */}
 
-      <section className="rounded-3xl border border-blue-400/20 bg-blue-400/5 p-8">
+      <section className="rounded-3xl border border-blue-100 bg-blue-50 p-8">
 
-        <p className="text-sm font-medium text-blue-300">
+        <p className="text-sm font-medium text-blue-700">
           ONE STEP AT A TIME 🚀
         </p>
 
@@ -449,7 +503,7 @@ export default function ProgressPage() {
           Your progress is your proof.
         </h2>
 
-        <p className="mt-3 max-w-2xl leading-7 text-zinc-400">
+        <p className="mt-3 max-w-2xl leading-7 text-slate-600">
           You don't have to become job-ready overnight.
           Learn one skill, build something with it,
           and keep moving forward.

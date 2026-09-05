@@ -1,30 +1,12 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
 
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  weight: ["400", "600"],
-  variable: "--font-display",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-body",
-});
-
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-mono-ui",
-});
+import Sidebar from "../components/Sidebar";
+import BunnyGuide from "../components/BunnyGuide";
 
 export const metadata: Metadata = {
-  title: "AI Skill Gap Analyzer",
-  description: "Discover your career skill gaps and build your roadmap.",
+  title: "SkillGap AI",
+  description: "AI-powered career skill gap analyzer",
 };
 
 export default function RootLayout({
@@ -33,17 +15,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${inter.variable} ${plexMono.variable}`}>
-      <body className="bg-[#0B0F14] text-[#EDE8DF] antialiased">
+    <html lang="en">
+      <body className="bg-zinc-50 text-zinc-900 antialiased">
+
+        {/* Sidebar */}
+
         <Sidebar />
 
-        <main className="ml-64 min-h-screen">
-          <Header />
 
-          <div className="px-8 py-8">
+        {/* Main application */}
+
+        <main className="min-h-screen lg:ml-72">
+
+          <div className="mx-auto w-full max-w-[1500px] px-5 py-8 sm:px-8 lg:px-10">
             {children}
           </div>
+
         </main>
+
+
+        {/* Bunny assistant */}
+
+        <BunnyGuide />
+
       </body>
     </html>
   );

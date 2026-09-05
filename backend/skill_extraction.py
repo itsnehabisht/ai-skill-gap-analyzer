@@ -2,6 +2,8 @@ import json
 import re
 from pathlib import Path
 
+import pypdf
+
 
 def find_skills_file():
     """
@@ -73,3 +75,22 @@ def extract_skills(resume_text):
             extracted_skills.append(skill)
 
     return extracted_skills
+
+
+def extract_text_from_pdf(file_bytes):
+    """
+    Take the raw bytes of an uploaded PDF and return
+    all the readable text inside it as one string.
+    """
+
+    reader = pypdf.PdfReader(file_bytes)
+
+    all_text = []
+
+    for page in reader.pages:
+        page_text = page.extract_text()
+
+        if page_text:
+            all_text.append(page_text)
+
+    return "\n".join(all_text)

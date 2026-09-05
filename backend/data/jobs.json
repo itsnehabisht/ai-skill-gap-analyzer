@@ -26,6 +26,61 @@
     ]
   },
 
+  "machine_learning_engineer": {
+    "title": "Machine Learning Engineer",
+    "required_skills": [
+      "Python",
+      "Machine Learning",
+      "Scikit-learn",
+      "TensorFlow",
+      "PyTorch",
+      "SQL",
+      "Git",
+      "Docker"
+    ]
+  },
+
+  "ai_engineer": {
+    "title": "AI Engineer",
+    "required_skills": [
+      "Python",
+      "Machine Learning",
+      "Deep Learning",
+      "TensorFlow",
+      "PyTorch",
+      "NLP",
+      "Git",
+      "APIs"
+    ]
+  },
+
+  "data_engineer": {
+    "title": "Data Engineer",
+    "required_skills": [
+      "Python",
+      "SQL",
+      "ETL",
+      "Data Warehousing",
+      "Apache Spark",
+      "Database Management",
+      "Git",
+      "Cloud Computing"
+    ]
+  },
+
+  "business_intelligence_analyst": {
+    "title": "Business Intelligence Analyst",
+    "required_skills": [
+      "Excel",
+      "SQL",
+      "Power BI",
+      "Tableau",
+      "Data Analysis",
+      "Data Visualization",
+      "Business Communication"
+    ]
+  },
+
   "frontend_developer": {
     "title": "Frontend Developer",
     "required_skills": [
@@ -50,6 +105,61 @@
       "Database Management",
       "Authentication",
       "Docker"
+    ]
+  },
+
+  "full_stack_developer": {
+    "title": "Full Stack Developer",
+    "required_skills": [
+      "HTML",
+      "CSS",
+      "JavaScript",
+      "React",
+      "Python",
+      "REST APIs",
+      "SQL",
+      "Git"
+    ]
+  },
+
+  "software_developer": {
+    "title": "Software Developer",
+    "required_skills": [
+      "Python",
+      "Java",
+      "Data Structures",
+      "Algorithms",
+      "Git",
+      "Object-Oriented Programming",
+      "SQL",
+      "Problem Solving"
+    ]
+  },
+
+  "ui_ux_designer": {
+    "title": "UI/UX Designer",
+    "required_skills": [
+      "UI Design",
+      "UX Design",
+      "Figma",
+      "Wireframing",
+      "Prototyping",
+      "User Research",
+      "Design Thinking"
+    ]
+  },
+
+  "qa_software_tester": {
+    "title": "QA / Software Tester",
+    "required_skills": [
+      "Software Testing",
+      "Manual Testing",
+      "Test Cases",
+      "Bug Tracking",
+      "Selenium",
+      "API Testing",
+      "SQL",
+      "Problem Solving"
     ]
   },
 
@@ -79,6 +189,45 @@
     ]
   },
 
+  "marketing_analyst": {
+    "title": "Marketing Analyst",
+    "required_skills": [
+      "Excel",
+      "Google Analytics",
+      "Data Analysis",
+      "SQL",
+      "Power BI",
+      "Market Research",
+      "Data Visualization"
+    ]
+  },
+
+  "hr_analyst": {
+    "title": "HR Analyst",
+    "required_skills": [
+      "Excel",
+      "Data Analysis",
+      "Power BI",
+      "Communication",
+      "HR Analytics",
+      "Problem Solving",
+      "Reporting"
+    ]
+  },
+
+  "financial_analyst": {
+    "title": "Financial Analyst",
+    "required_skills": [
+      "Excel",
+      "Financial Analysis",
+      "Financial Modeling",
+      "Accounting",
+      "Data Analysis",
+      "Power BI",
+      "Business Communication"
+    ]
+  },
+
   "clinical_research_associate": {
     "title": "Clinical Research Associate",
     "required_skills": [
@@ -89,6 +238,58 @@
       "Data Management",
       "Regulatory Documentation",
       "Pharmacology"
+    ]
+  },
+
+  "pharmacovigilance_associate": {
+    "title": "Pharmacovigilance Associate",
+    "required_skills": [
+      "Pharmacovigilance",
+      "Drug Safety",
+      "Medical Terminology",
+      "Adverse Event Reporting",
+      "Clinical Research",
+      "Regulatory Documentation",
+      "Data Management"
+    ]
+  },
+
+  "regulatory_affairs_associate": {
+    "title": "Regulatory Affairs Associate",
+    "required_skills": [
+      "Regulatory Affairs",
+      "Regulatory Documentation",
+      "Pharmaceutical Regulations",
+      "Good Manufacturing Practice",
+      "Medical Terminology",
+      "Documentation",
+      "Communication"
+    ]
+  },
+
+  "medical_writer": {
+    "title": "Medical Writer",
+    "required_skills": [
+      "Medical Writing",
+      "Medical Terminology",
+      "Scientific Writing",
+      "Research",
+      "Pharmacology",
+      "Documentation",
+      "Communication"
+    ]
+  },
+
+  "quality_assurance_pharma": {
+    "title": "Pharmaceutical Quality Assurance",
+    "required_skills": [
+      "Quality Assurance",
+      "Good Manufacturing Practice",
+      "Quality Control",
+      "Documentation",
+      "Pharmaceutical Regulations",
+      "Audit Management",
+      "Problem Solving"
     ]
   }
 }

@@ -1,26 +1,114 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8f7ff;
+  --foreground: #17172b;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
+  margin: 0;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(139, 92, 246, 0.08), transparent 28%),
+    radial-gradient(circle at 90% 20%, rgba(59, 130, 246, 0.07), transparent 25%),
+    #f8f7ff;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: rgba(124, 58, 237, 0.2);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1eff8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c4b5fd;
+  border-radius: 999px;
+}
+
+.app-card {
+  border: 1px solid #e9e5f5;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 10px 35px rgba(72, 50, 120, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+.soft-card {
+  border: 1px solid #eeeaf8;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(249, 247, 255, 0.95)
+  );
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, #6d28d9, #2563eb);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bunny-float {
+  animation: bunnyFloat 3s ease-in-out infinite;
+}
+
+.bunny-float:hover {
+  animation-play-state: paused;
+}
+
+@keyframes bunnyFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-6px) rotate(1deg);
+  }
+}
+
+.bunny-pop {
+  animation: bunnyPop 0.35s ease-out;
+}
+
+@keyframes bunnyPop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.6;
+  }
+
+  70% {
+    transform: scale(1.08);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }

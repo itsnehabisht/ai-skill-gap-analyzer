@@ -48,7 +48,10 @@ export default function ReportsPage() {
         }
 
         const profileResponse = await fetch(
-          "http://127.0.0.1:8000/api/profile"
+          "http://127.0.0.1:8000/api/profile",
+          {
+            cache: "no-store",
+          }
         );
 
         if (!profileResponse.ok) {
@@ -65,6 +68,31 @@ export default function ReportsPage() {
 
         const profile: Profile = profileData.profile;
 
+        // --------------------------------
+        // Load resume-extracted skills
+        // --------------------------------
+
+        const skillsResponse = await fetch(
+          "http://127.0.0.1:8000/api/resume/skills",
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (!skillsResponse.ok) {
+          throw new Error("Could not load resume skills.");
+        }
+
+        const skillsData = await skillsResponse.json();
+
+        const resumeSkills: string[] =
+          skillsData.skills || [];
+
+        const updatedProfile: Profile = {
+          ...profile,
+          skills: resumeSkills,
+        };
+
         const skillGapResponse = await fetch(
           "http://127.0.0.1:8000/api/skill-gap",
           {
@@ -73,7 +101,7 @@ export default function ReportsPage() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              student_skills: profile.skills,
+              student_skills: resumeSkills,
               job_id: selectedJob,
             }),
           }
@@ -97,7 +125,7 @@ export default function ReportsPage() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              student_skills: profile.skills,
+              student_skills: resumeSkills,
               job_id: selectedJob,
             }),
           }
@@ -114,23 +142,36 @@ export default function ReportsPage() {
           throw new Error(recommendationData.error);
         }
 
-        const savedProgress = localStorage.getItem(
-          `learningProgress_${selectedJob}`
+        const progressResponse = await fetch(
+          "http://127.0.0.1:8000/api/progress",
+          {
+            cache: "no-store",
+          }
         );
 
-        const completedSkills: string[] = savedProgress
-          ? JSON.parse(savedProgress)
-          : [];
+        let completedSkills: string[] = [];
+
+        if (progressResponse.ok) {
+          const progressData = await progressResponse.json();
+          completedSkills =
+            progressData.completed_skills || [];
+        }
 
         setReport({
-          profile,
+          profile: updatedProfile,
           skillGap,
-          recommendations: recommendationData.recommendations,
+          recommendations:
+            recommendationData.recommendations || [],
           completedSkills,
         });
       } catch (error) {
         console.error("Report generation error:", error);
-        setMessage("We couldn't generate your report.");
+
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "We couldn't generate your report."
+        );
       } finally {
         setLoading(false);
       }
@@ -143,9 +184,9 @@ export default function ReportsPage() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-white/10 border-t-blue-400" />
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-blue-100 border-t-blue-600" />
 
-          <p className="mt-4 text-zinc-400">
+          <p className="mt-4 text-slate-600">
             Generating your career report...
           </p>
         </div>
@@ -156,8 +197,8 @@ export default function ReportsPage() {
   if (message) {
     return (
       <div className="mx-auto max-w-3xl">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
-          <p className="text-sm font-medium text-blue-400">
+        <div className="rounded-3xl border border-violet-100 bg-white p-8">
+          <p className="text-sm font-medium text-blue-700">
             CAREER REPORT
           </p>
 
@@ -165,7 +206,7 @@ export default function ReportsPage() {
             Your report is waiting.
           </h1>
 
-          <p className="mt-3 text-zinc-400">
+          <p className="mt-3 text-slate-600">
             {message}
           </p>
         </div>
@@ -177,9 +218,19 @@ export default function ReportsPage() {
     return null;
   }
 
-  const totalLearningSkills = report.recommendations.length;
+  const totalLearningSkills =
+    report.recommendations.length;
 
-  const completedCount = report.completedSkills.length;
+  const completedCurrentSkills =
+    report.recommendations.filter(
+      (recommendation) =>
+        report.completedSkills.includes(
+          recommendation.skill
+        )
+    );
+
+  const completedCount =
+    completedCurrentSkills.length;
 
   const learningProgress =
     totalLearningSkills === 0
@@ -187,7 +238,9 @@ export default function ReportsPage() {
       : Math.min(
           100,
           Math.round(
-            (completedCount / totalLearningSkills) * 100
+            (completedCount /
+              totalLearningSkills) *
+              100
           )
         );
 
@@ -209,12 +262,12 @@ export default function ReportsPage() {
 
       {/* Header */}
 
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
+      <section className="rounded-3xl border border-violet-100 bg-white p-8">
 
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
 
           <div>
-            <p className="text-sm font-medium text-blue-400">
+            <p className="text-sm font-medium text-blue-700">
               AI SKILL GAP ANALYZER
             </p>
 
@@ -222,9 +275,9 @@ export default function ReportsPage() {
               Career Readiness Report
             </h1>
 
-            <p className="mt-3 text-zinc-400">
+            <p className="mt-3 text-slate-600">
               Personalized career analysis for{" "}
-              <span className="font-medium text-white">
+              <span className="font-medium text-zinc-900">
                 {report.profile.name}
               </span>
             </p>
@@ -236,7 +289,6 @@ export default function ReportsPage() {
           >
             Print / Save PDF
           </button>
-
         </div>
 
       </section>
@@ -246,8 +298,8 @@ export default function ReportsPage() {
 
       <section className="grid gap-5 md:grid-cols-4">
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <p className="text-xs uppercase tracking-wider text-zinc-500">
+        <div className="rounded-2xl border border-violet-100 bg-white p-5">
+          <p className="text-xs uppercase tracking-wider text-slate-500">
             Candidate
           </p>
 
@@ -256,8 +308,8 @@ export default function ReportsPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <p className="text-xs uppercase tracking-wider text-zinc-500">
+        <div className="rounded-2xl border border-violet-100 bg-white p-5">
+          <p className="text-xs uppercase tracking-wider text-slate-500">
             Education
           </p>
 
@@ -266,8 +318,8 @@ export default function ReportsPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <p className="text-xs uppercase tracking-wider text-zinc-500">
+        <div className="rounded-2xl border border-violet-100 bg-white p-5">
+          <p className="text-xs uppercase tracking-wider text-slate-500">
             Experience
           </p>
 
@@ -277,8 +329,8 @@ export default function ReportsPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <p className="text-xs uppercase tracking-wider text-zinc-500">
+        <div className="rounded-2xl border border-violet-100 bg-white p-5">
+          <p className="text-xs uppercase tracking-wider text-slate-500">
             Target Career
           </p>
 
@@ -292,13 +344,13 @@ export default function ReportsPage() {
 
       {/* Main readiness score */}
 
-      <section className="rounded-3xl border border-blue-400/20 bg-gradient-to-br from-blue-400/10 via-white/5 to-transparent p-8">
+      <section className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white/5 to-transparent p-8">
 
         <div className="flex flex-col justify-between gap-8 md:flex-row md:items-end">
 
           <div>
 
-            <p className="text-sm font-medium text-blue-300">
+            <p className="text-sm font-medium text-blue-700">
               OVERALL CAREER READINESS
             </p>
 
@@ -308,15 +360,15 @@ export default function ReportsPage() {
                 {skillMatch}%
               </span>
 
-              <span className="pb-3 text-zinc-500">
+              <span className="pb-3 text-slate-500">
                 skill match
               </span>
 
             </div>
 
-            <p className="mt-3 text-zinc-400">
+            <p className="mt-3 text-slate-600">
               Readiness status:{" "}
-              <span className="font-medium text-white">
+              <span className="font-medium text-zinc-900">
                 {readinessLabel}
               </span>
             </p>
@@ -324,9 +376,9 @@ export default function ReportsPage() {
           </div>
 
 
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-5 md:min-w-52">
+          <div className="rounded-2xl border border-violet-100 bg-slate-100 p-5 md:min-w-52">
 
-            <p className="text-xs uppercase tracking-wider text-zinc-500">
+            <p className="text-xs uppercase tracking-wider text-slate-500">
               Target Role
             </p>
 
@@ -334,7 +386,7 @@ export default function ReportsPage() {
               {report.skillGap.job_title}
             </p>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 text-sm text-slate-500">
               {report.skillGap.matching_skills.length} of{" "}
               {report.skillGap.required_skills.length} required
               skills matched
@@ -345,10 +397,10 @@ export default function ReportsPage() {
         </div>
 
 
-        <div className="mt-8 h-4 overflow-hidden rounded-full bg-white/10">
+        <div className="mt-8 h-4 overflow-hidden rounded-full bg-slate-200">
 
           <div
-            className="h-full rounded-full bg-blue-400 transition-all duration-1000"
+            className="h-full rounded-full bg-blue-500 transition-all duration-1000"
             style={{
               width: `${skillMatch}%`,
             }}
@@ -363,9 +415,9 @@ export default function ReportsPage() {
 
       <section className="grid gap-5 md:grid-cols-4">
 
-        <div className="rounded-2xl border border-green-400/20 bg-green-400/5 p-6">
+        <div className="rounded-2xl border border-green-200 bg-green-50 p-6">
 
-          <p className="text-sm text-green-400">
+          <p className="text-sm text-green-700">
             MATCHED
           </p>
 
@@ -373,16 +425,16 @@ export default function ReportsPage() {
             {report.skillGap.matching_skills.length}
           </p>
 
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-slate-500">
             skills aligned
           </p>
 
         </div>
 
 
-        <div className="rounded-2xl border border-orange-400/20 bg-orange-400/5 p-6">
+        <div className="rounded-2xl border border-orange-200 bg-orange-400/5 p-6">
 
-          <p className="text-sm text-orange-400">
+          <p className="text-sm text-orange-700">
             TO DEVELOP
           </p>
 
@@ -390,16 +442,16 @@ export default function ReportsPage() {
             {report.skillGap.missing_skills.length}
           </p>
 
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-slate-500">
             skill gaps identified
           </p>
 
         </div>
 
 
-        <div className="rounded-2xl border border-blue-400/20 bg-blue-400/5 p-6">
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-6">
 
-          <p className="text-sm text-blue-400">
+          <p className="text-sm text-blue-700">
             LEARNING
           </p>
 
@@ -407,16 +459,16 @@ export default function ReportsPage() {
             {learningProgress}%
           </p>
 
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-slate-500">
             roadmap completed
           </p>
 
         </div>
 
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+        <div className="rounded-2xl border border-violet-100 bg-white p-6">
 
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-slate-600">
             PROFILE SKILLS
           </p>
 
@@ -424,7 +476,7 @@ export default function ReportsPage() {
             {report.profile.skills.length}
           </p>
 
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-slate-500">
             skills in your profile
           </p>
 
@@ -435,9 +487,9 @@ export default function ReportsPage() {
 
       {/* Strengths */}
 
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-7">
+      <section className="rounded-3xl border border-violet-100 bg-white p-7">
 
-        <p className="text-sm font-medium text-green-400">
+        <p className="text-sm font-medium text-green-700">
           YOUR STRENGTHS
         </p>
 
@@ -445,7 +497,7 @@ export default function ReportsPage() {
           Skills you already have
         </h2>
 
-        <p className="mt-2 text-sm text-zinc-500">
+        <p className="mt-2 text-sm text-slate-500">
           These skills currently match the requirements of your target role.
         </p>
 
@@ -455,13 +507,13 @@ export default function ReportsPage() {
             report.skillGap.matching_skills.map((skill) => (
               <span
                 key={skill}
-                className="rounded-full border border-green-400/20 bg-green-400/10 px-4 py-2 text-sm text-green-300"
+                className="rounded-full border border-green-200 bg-green-100 px-4 py-2 text-sm text-green-700"
               >
                 ✓ {skill}
               </span>
             ))
           ) : (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-slate-500">
               No matching skills found yet.
             </p>
           )}
@@ -473,9 +525,9 @@ export default function ReportsPage() {
 
       {/* Skill gaps */}
 
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-7">
+      <section className="rounded-3xl border border-violet-100 bg-white p-7">
 
-        <p className="text-sm font-medium text-orange-400">
+        <p className="text-sm font-medium text-orange-700">
           GROWTH AREAS
         </p>
 
@@ -483,7 +535,7 @@ export default function ReportsPage() {
           Skills that can move you forward
         </h2>
 
-        <p className="mt-2 text-sm text-zinc-500">
+        <p className="mt-2 text-sm text-slate-500">
           These are the skills currently missing from your target-role
           requirements.
         </p>
@@ -494,13 +546,13 @@ export default function ReportsPage() {
             report.skillGap.missing_skills.map((skill) => (
               <span
                 key={skill}
-                className="rounded-full border border-orange-400/20 bg-orange-400/10 px-4 py-2 text-sm text-orange-300"
+                className="rounded-full border border-orange-200 bg-orange-100 px-4 py-2 text-sm text-orange-700"
               >
                 + {skill}
               </span>
             ))
           ) : (
-            <p className="text-sm text-green-400">
+            <p className="text-sm text-green-700">
               🎉 You currently match every required skill.
             </p>
           )}
@@ -512,13 +564,13 @@ export default function ReportsPage() {
 
       {/* Learning progress */}
 
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-7">
+      <section className="rounded-3xl border border-violet-100 bg-white p-7">
 
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
 
           <div>
 
-            <p className="text-sm font-medium text-blue-400">
+            <p className="text-sm font-medium text-blue-700">
               LEARNING PROGRESS
             </p>
 
@@ -526,7 +578,7 @@ export default function ReportsPage() {
               Your roadmap progress
             </h2>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 text-sm text-slate-500">
               {completedCount} of {totalLearningSkills} recommended
               skills completed.
             </p>
@@ -540,10 +592,10 @@ export default function ReportsPage() {
         </div>
 
 
-        <div className="mt-6 h-3 overflow-hidden rounded-full bg-white/10">
+        <div className="mt-6 h-3 overflow-hidden rounded-full bg-slate-200">
 
           <div
-            className="h-full rounded-full bg-blue-400 transition-all duration-700"
+            className="h-full rounded-full bg-blue-500 transition-all duration-700"
             style={{
               width: `${learningProgress}%`,
             }}
@@ -556,9 +608,9 @@ export default function ReportsPage() {
 
       {/* Recommended roadmap */}
 
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-7">
+      <section className="rounded-3xl border border-violet-100 bg-white p-7">
 
-        <p className="text-sm font-medium text-blue-400">
+        <p className="text-sm font-medium text-blue-700">
           RECOMMENDED ROADMAP
         </p>
 
@@ -580,7 +632,7 @@ export default function ReportsPage() {
                 return (
                   <div
                     key={recommendation.skill}
-                    className="rounded-2xl border border-white/10 bg-black/20 p-5"
+                    className="rounded-2xl border border-violet-100 bg-slate-100 p-5"
                   >
 
                     <div className="flex items-start gap-4">
@@ -588,8 +640,8 @@ export default function ReportsPage() {
                       <div
                         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${
                           completed
-                            ? "bg-green-400/10 text-green-300"
-                            : "bg-blue-400/10 text-blue-300"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-blue-100 text-blue-700"
                         }`}
                       >
                         {completed
@@ -609,22 +661,22 @@ export default function ReportsPage() {
                           <span
                             className={`rounded-full px-3 py-1 text-xs ${
                               recommendation.priority === "High"
-                                ? "bg-red-400/10 text-red-300"
-                                : "bg-yellow-400/10 text-yellow-300"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-yellow-100 text-yellow-800"
                             }`}
                           >
                             {recommendation.priority} Priority
                           </span>
 
                           {completed && (
-                            <span className="rounded-full bg-green-400/10 px-3 py-1 text-xs text-green-300">
+                            <span className="rounded-full bg-green-100 px-3 py-1 text-xs text-green-700">
                               Completed
                             </span>
                           )}
 
                         </div>
 
-                        <p className="mt-2 text-sm leading-6 text-zinc-500">
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
                           {recommendation.description}
                         </p>
 
@@ -637,7 +689,7 @@ export default function ReportsPage() {
               }
             )
           ) : (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-slate-500">
               No learning recommendations available.
             </p>
           )}
@@ -649,9 +701,9 @@ export default function ReportsPage() {
 
       {/* Final recommendation */}
 
-      <section className="rounded-3xl border border-blue-400/20 bg-blue-400/5 p-8">
+      <section className="rounded-3xl border border-blue-100 bg-blue-50 p-8">
 
-        <p className="text-sm font-medium text-blue-300">
+        <p className="text-sm font-medium text-blue-700">
           YOUR NEXT MOVE 🚀
         </p>
 
@@ -665,12 +717,10 @@ export default function ReportsPage() {
             : "Start with your highest-priority skill."}
         </h2>
 
-        <p className="mt-4 max-w-3xl leading-7 text-zinc-400">
-
+        <p className="mt-4 max-w-3xl leading-7 text-slate-600">
           {learningProgress === 100
             ? "Keep practicing your skills, build projects, and continue updating your profile as you grow."
             : "Your skill gaps are not weaknesses. They are a practical roadmap showing exactly where your next improvement can make the biggest difference."}
-
         </p>
 
       </section>
@@ -680,7 +730,7 @@ export default function ReportsPage() {
 
       <section className="pb-8 text-center">
 
-        <p className="text-xs text-zinc-600">
+        <p className="text-xs text-slate-500">
           AI Skill Gap Analyzer • Career Intelligence Report
         </p>
 

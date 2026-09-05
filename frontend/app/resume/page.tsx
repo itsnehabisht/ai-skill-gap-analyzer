@@ -7,8 +7,8 @@ export default function ResumePage() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [extractedSkills, setExtractedSkills] = useState<string[]>([]);
 
-  
   async function handleUpload() {
     if (!file) {
       setError("Please choose a resume first.");
@@ -18,6 +18,7 @@ export default function ResumePage() {
     setUploading(true);
     setMessage("");
     setError("");
+    setExtractedSkills([]);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -40,7 +41,25 @@ export default function ResumePage() {
 
       console.log("Resume analysis response:", data);
 
-      setMessage("Resume analyzed successfully!");
+      setMessage(
+        `Resume analyzed successfully! Found ${data.skills_found} skill(s).`
+      );
+
+      setExtractedSkills(
+        data.extracted_skills || []
+      );
+
+      // Notify other pages/components that the
+      // resume skills have been updated.
+      localStorage.setItem(
+        "resumeSkillsUpdatedAt",
+        Date.now().toString()
+      );
+
+      window.dispatchEvent(
+        new Event("resumeSkillsUpdated")
+      );
+
     } catch (error) {
       console.error("Resume upload error:", error);
       setError("Could not connect to the backend.");
@@ -48,7 +67,6 @@ export default function ResumePage() {
       setUploading(false);
     }
   }
-
 
   function handleFileChange(
     event: React.ChangeEvent<HTMLInputElement>
@@ -70,6 +88,9 @@ export default function ResumePage() {
     }
 
     setFile(selectedFile);
+    setExtractedSkills([]);
+    setMessage("");
+    setError("");
   }
 
   return (
@@ -151,7 +172,7 @@ export default function ResumePage() {
 
       </section>
 
-      
+
       {file && (
         <button
           type="button"
@@ -163,7 +184,7 @@ export default function ResumePage() {
         </button>
       )}
 
-      
+
       {message && (
         <p className="mt-4 text-sm text-green-400">
           ✓ {message}
@@ -174,6 +195,32 @@ export default function ResumePage() {
         <p className="mt-4 text-sm text-red-400">
           {error}
         </p>
+      )}
+
+
+      {extractedSkills.length > 0 && (
+        <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
+
+          <h2 className="text-lg font-semibold">
+            Skills we found in your resume
+          </h2>
+
+          <p className="mt-1 text-sm text-zinc-500">
+            These have been extracted from your resume automatically.
+          </p>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            {extractedSkills.map((skill) => (
+              <span
+                key={skill}
+                className="rounded-full bg-blue-400/10 px-4 py-1.5 text-sm font-medium text-blue-300"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+
+        </section>
       )}
 
 

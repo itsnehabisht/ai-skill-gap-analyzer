@@ -16,173 +16,152 @@ export default function SkillGapPage() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    async function analyzeSkillGap() {
+    async function loadSkillGap() {
       try {
-        /*
-         * Get the target job selected by the student.
-         */
+        setLoading(true);
+        setMessage("");
+
         const selectedJob = localStorage.getItem("selectedJob");
 
+        console.log("Selected job:", selectedJob);
+
         if (!selectedJob) {
-          setMessage("Please choose a target career first.");
-          setLoading(false);
+          setMessage("Please select a target job first.");
           return;
         }
 
-
-        /*
-         * Get skills extracted from the uploaded resume.
-         */
-        const resumeResponse = await fetch(
-          "http://127.0.0.1:8000/api/resume/skills"
+        const profileResponse = await fetch(
+          "http://127.0.0.1:8000/api/profile",
+          {
+            cache: "no-store",
+          }
         );
 
-        if (!resumeResponse.ok) {
+        if (!profileResponse.ok) {
+          throw new Error("Could not load profile.");
+        }
+
+        const profileData = await profileResponse.json();
+
+        console.log("Profile:", profileData.profile);
+
+        if (!profileData.profile) {
+          setMessage("Please complete your profile first.");
+          return;
+        }
+
+        // Resume-extracted skills are the source of truth.
+        const skillsResponse = await fetch(
+          "http://127.0.0.1:8000/api/resume/skills",
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (!skillsResponse.ok) {
           throw new Error("Could not load resume skills.");
         }
 
-        const resumeData = await resumeResponse.json();
+        const skillsData = await skillsResponse.json();
+        const skills: string[] = skillsData.skills || [];
 
-        const resumeSkills = resumeData.skills || [];
+        console.log("Resume skills sent to skill-gap:", skills);
 
-
-        /*
-         * If no resume skills exist, ask the student
-         * to upload a resume first.
-         */
-        if (resumeSkills.length === 0) {
-          setMessage(
-            "Please upload and analyze your resume first so we can identify your skills."
-          );
-
-          setLoading(false);
-          return;
-        }
-
-
-        /*
-         * Send resume-extracted skills + target job
-         * to the skill gap engine.
-         */
         const response = await fetch(
           "http://127.0.0.1:8000/api/skill-gap",
           {
             method: "POST",
-
             headers: {
               "Content-Type": "application/json",
             },
-
             body: JSON.stringify({
-              student_skills: resumeSkills,
+              student_skills: skills,
               job_id: selectedJob,
             }),
+            cache: "no-store",
           }
         );
 
-
         if (!response.ok) {
-          throw new Error("Skill gap analysis failed.");
+          throw new Error("Skill gap request failed.");
         }
-
 
         const data = await response.json();
 
+        console.log("Skill gap response:", data);
 
         if (data.error) {
           throw new Error(data.error);
         }
 
-
-        setResult(data);
-
+        setResult({
+          job_title: data.job_title,
+          required_skills: data.required_skills || [],
+          matching_skills: data.matching_skills || [],
+          missing_skills: data.missing_skills || [],
+          skill_match_percentage:
+            Number(data.skill_match_percentage) || 0,
+        });
       } catch (error) {
-
         console.error("Skill gap error:", error);
 
         setMessage(
-          "We couldn't analyze your skill gap. Please upload your resume and choose a target job."
+          error instanceof Error
+            ? error.message
+            : "We couldn't analyze your skill gap. Please try again."
         );
-
       } finally {
-
         setLoading(false);
       }
     }
 
-
-    analyzeSkillGap();
-
+    loadSkillGap();
   }, []);
 
-
-  /*
-   * Loading screen
-   */
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-
         <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-white/10 border-t-blue-400" />
 
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-white/10 border-t-blue-400" />
-
-          <p className="mt-5 text-lg font-medium text-white">
-            Analyzing your career readiness...
+          <p className="mt-4 text-zinc-400">
+            Analyzing your skills...
           </p>
-
-          <p className="mt-2 text-sm text-zinc-500">
-            Comparing your resume skills with your target role.
-          </p>
-
         </div>
-
       </div>
     );
   }
 
-
-  /*
-   * Error / missing information screen
-   */
   if (message) {
     return (
       <div className="mx-auto max-w-3xl">
-
         <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
-
           <p className="text-sm font-medium text-blue-400">
             SKILL GAP ANALYSIS
           </p>
 
           <h1 className="mt-3 text-3xl font-bold">
-            Let's find your skill gap.
+            Let's analyze your career fit.
           </h1>
 
-          <p className="mt-3 leading-7 text-zinc-400">
+          <p className="mt-3 text-zinc-400">
             {message}
           </p>
-
         </div>
-
       </div>
     );
   }
-
 
   if (!result) {
     return null;
   }
 
-
   return (
     <div className="mx-auto max-w-6xl space-y-8">
 
-
-      {/* Heading */}
+      {/* Header */}
 
       <section>
-
         <p className="text-sm font-medium text-blue-400">
           SKILL GAP ANALYSIS
         </p>
@@ -192,10 +171,9 @@ export default function SkillGapPage() {
         </h1>
 
         <p className="mt-3 max-w-2xl text-zinc-400">
-          We analyzed the skills found in your resume and compared them
-          with the requirements of your target career.
+          Here's how your current skills compare with the requirements
+          of your target career.
         </p>
-
       </section>
 
 
@@ -203,16 +181,14 @@ export default function SkillGapPage() {
 
       <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
 
-        <div className="flex flex-col justify-between gap-8 md:flex-row md:items-end">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
 
           <div>
-
             <p className="text-sm text-zinc-500">
               Overall Skill Match
             </p>
 
             <div className="mt-2 flex items-end gap-3">
-
               <span className="text-6xl font-bold">
                 {result.skill_match_percentage}%
               </span>
@@ -220,26 +196,21 @@ export default function SkillGapPage() {
               <span className="pb-2 text-zinc-500">
                 match
               </span>
-
             </div>
-
           </div>
 
 
-          <div className="text-left md:text-right">
+          <div className="md:text-right">
 
             <p className="text-sm text-zinc-500">
               Skills matched
             </p>
 
-            <p className="mt-1 text-2xl font-semibold">
-
+            <p className="mt-1 text-3xl font-bold">
               {result.matching_skills.length}
-
               <span className="text-zinc-600">
                 /{result.required_skills.length}
               </span>
-
             </p>
 
           </div>
@@ -247,50 +218,91 @@ export default function SkillGapPage() {
         </div>
 
 
-        {/* Progress bar */}
-
-        <div className="mt-7 h-3 overflow-hidden rounded-full bg-white/10">
+        <div className="mt-6 h-4 overflow-hidden rounded-full bg-white/10">
 
           <div
-            className="h-full rounded-full bg-blue-400 transition-all duration-1000"
+            className="h-full rounded-full bg-blue-400 transition-all duration-700"
             style={{
-              width: `${result.skill_match_percentage}%`,
+              width: `${Math.min(
+                Math.max(result.skill_match_percentage, 0),
+                100
+              )}%`,
             }}
           />
 
         </div>
 
+      </section>
 
-        <p className="mt-3 text-sm text-zinc-500">
-          Your resume currently covers{" "}
-          {result.skill_match_percentage}% of the skills required
-          for this role.
-        </p>
+
+      {/* Quick statistics */}
+
+      <section className="grid gap-5 md:grid-cols-3">
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+          <p className="text-sm text-zinc-500">
+            Match Score
+          </p>
+
+          <p className="mt-3 text-4xl font-bold">
+            {result.skill_match_percentage}%
+          </p>
+
+          <p className="mt-2 text-sm text-zinc-400">
+            Your current role alignment
+          </p>
+        </div>
+
+
+        <div className="rounded-2xl border border-green-400/10 bg-green-400/5 p-6">
+          <p className="text-sm text-green-400">
+            Skills You Have
+          </p>
+          <p className="mt-3 text-4xl font-bold text-green-300">
+            {result.matching_skills.length}
+          </p>
+
+          <p className="mt-2 text-sm text-zinc-400">
+            Skills matching this role
+          </p>
+        </div>
+
+
+        <div className="rounded-2xl border border-orange-400/10 bg-orange-400/5 p-6">
+          <p className="text-sm text-orange-400">
+            Skills To Develop
+          </p>
+
+          <p className="mt-3 text-4xl font-bold text-orange-300">
+            {result.missing_skills.length}
+          </p>
+
+          <p className="mt-2 text-sm text-zinc-400">
+            Skills remaining in your roadmap
+          </p>
+        </div>
 
       </section>
 
 
-      {/* Skill comparison */}
+      {/* Matching and missing skills */}
 
       <section className="grid gap-6 md:grid-cols-2">
 
-
-        {/* Matching skills */}
+        {/* Matching */}
 
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
 
           <div className="flex items-center justify-between">
 
             <div>
-
               <p className="text-sm font-medium text-green-400">
                 ✓ SKILLS YOU HAVE
               </p>
 
               <p className="mt-1 text-xs text-zinc-500">
-                Skills found in your resume
+                Already aligned with your target role
               </p>
-
             </div>
 
             <span className="rounded-full bg-green-400/10 px-3 py-1 text-sm text-green-300">
@@ -303,24 +315,18 @@ export default function SkillGapPage() {
           <div className="mt-6 flex flex-wrap gap-3">
 
             {result.matching_skills.length > 0 ? (
-
               result.matching_skills.map((skill) => (
-
                 <span
                   key={skill}
                   className="rounded-full border border-green-400/20 bg-green-400/10 px-4 py-2 text-sm text-green-300"
                 >
                   ✓ {skill}
                 </span>
-
               ))
-
             ) : (
-
               <p className="text-sm text-zinc-500">
                 No matching skills yet.
               </p>
-
             )}
 
           </div>
@@ -328,22 +334,20 @@ export default function SkillGapPage() {
         </div>
 
 
-        {/* Missing skills */}
+        {/* Missing */}
 
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
 
           <div className="flex items-center justify-between">
 
             <div>
-
               <p className="text-sm font-medium text-orange-400">
                 ◇ SKILLS TO DEVELOP
               </p>
 
               <p className="mt-1 text-xs text-zinc-500">
-                Skills required by your target role
+                These skills can improve your career readiness
               </p>
-
             </div>
 
             <span className="rounded-full bg-orange-400/10 px-3 py-1 text-sm text-orange-300">
@@ -356,24 +360,18 @@ export default function SkillGapPage() {
           <div className="mt-6 flex flex-wrap gap-3">
 
             {result.missing_skills.length > 0 ? (
-
               result.missing_skills.map((skill) => (
-
                 <span
                   key={skill}
                   className="rounded-full border border-orange-400/20 bg-orange-400/10 px-4 py-2 text-sm text-orange-300"
                 >
                   + {skill}
                 </span>
-
               ))
-
             ) : (
-
               <p className="text-sm text-zinc-500">
-                Amazing! You currently match every required skill.
+                Amazing! You match every required skill.
               </p>
-
             )}
 
           </div>
@@ -398,14 +396,12 @@ export default function SkillGapPage() {
         <div className="mt-5 flex flex-wrap gap-3">
 
           {result.required_skills.map((skill) => (
-
             <span
               key={skill}
               className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-zinc-300"
             >
               {skill}
             </span>
-
           ))}
 
         </div>
@@ -413,26 +409,27 @@ export default function SkillGapPage() {
       </section>
 
 
-      {/* Resume-based insight */}
+      {/* Next step */}
 
-      <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 to-transparent p-8">
+      <section className="rounded-3xl border border-blue-400/20 bg-blue-400/5 p-8">
 
-        <p className="text-sm font-medium text-blue-400">
-          YOUR CAREER INSIGHT
+        <p className="text-sm font-medium text-blue-300">
+          YOUR NEXT STEP 🚀
         </p>
 
         <h2 className="mt-3 text-2xl font-semibold">
-          Your skill gap is your roadmap. 🚀
+          Your missing skills are your roadmap.
         </h2>
 
         <p className="mt-3 max-w-2xl leading-7 text-zinc-400">
-          Your missing skills aren't weaknesses. They show you exactly
-          what to learn next. We'll use these gaps to create a
-          personalized learning path for you.
+          You already have {result.matching_skills.length} skill
+          {result.matching_skills.length !== 1 ? "s" : ""} that match
+          this role. Focus on the {result.missing_skills.length} skill
+          {result.missing_skills.length !== 1 ? "s" : ""} you still need
+          to develop.
         </p>
 
       </section>
-
 
     </div>
   );

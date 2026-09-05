@@ -1,22 +1,162 @@
 import sys
 import json
+import io
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-sys.path.append(str(PROJECT_ROOT))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
-
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from pypdf import PdfReader
+
+from fastapi import UploadFile, File
 
 from ml.predict import predict_job_readiness
 from backend.skill_gap import calculate_skill_gap
 from backend.learning_recommendations import generate_recommendations
-from backend.skill_extraction import extract_skills
+from backend.skill_extraction import extract_text_from_pdf, extract_skills
 
+
+# ============================================================
+# APP
+# ============================================================
+
+app = FastAPI(
+    title="AI Skill Gap Analyzer API",
+    description="Backend API for the AI Skill Gap Analyzer project.",
+    version="1.0.0",
+)
+
+
+# ============================================================
+# CORS
+# ============================================================
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ============================================================
+# PATHS
+# ============================================================
+
+BASE_DIR = Path(__file__).resolve().parent
+
+JOBS_PATH = BASE_DIR / "data" / "jobs.json"
+SKILLS_PATH = BASE_DIR / "data" / "skills.json"
+PROFILE_PATH = BASE_DIR / "data" / "profile.json"
+PROGRESS_PATH = BASE_DIR / "data" / "progress.json"
+
+
+# ============================================================
+# DATA LOADING
+# ============================================================
+
+def load_jobs():
+    with open(JOBS_PATH, "r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def load_skills():
+    with open(SKILLS_PATH, "r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+# ============================================================
+# PROFILE STORAGE
+# ============================================================
+
+def load_profile():
+    if not PROFILE_PATH.exists():
+        return None
+
+    try:
+        with open(PROFILE_PATH, "r", encoding="utf-8") as file:
+            return json.load(file)
+
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def save_profile(profile):
+    PROFILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(PROFILE_PATH, "w", encoding="utf-8") as file:
+        json.dump(
+            profile,
+            file,
+            indent=4,
+            ensure_ascii=False
+        )
+
+
+# ============================================================
+# PROGRESS STORAGE
+# ============================================================
+
+def load_progress():
+    """
+    Load saved learning progress.
+
+    If progress.json does not exist yet,
+    return an empty progress structure.
+    """
+
+    if not PROGRESS_PATH.exists():
+        return {
+            "completed_skills": []
+        }
+
+    try:
+        with open(PROGRESS_PATH, "r", encoding="utf-8") as file:
+            data = json.load(file)
+
+        if not isinstance(data, dict):
+            return {
+                "completed_skills": []
+            }
+
+        if "completed_skills" not in data:
+            data["completed_skills"] = []
+
+        return data
+
+    except (json.JSONDecodeError, OSError):
+        return {
+            "completed_skills": []
+        }
+
+
+def save_progress(progress):
+    """
+    Save learning progress permanently.
+    """
+
+    PROGRESS_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(PROGRESS_PATH, "w", encoding="utf-8") as file:
+        json.dump(
+            progress,
+            file,
+            indent=4,
+            ensure_ascii=False
+        )
+
+
+# ============================================================
+# PYDANTIC MODELS
+# ============================================================
 
 class StudentData(BaseModel):
     python: int = Field(ge=0, le=1)
@@ -33,40 +173,6 @@ class StudentData(BaseModel):
     skill_match_percentage: float = Field(ge=0, le=100)
 
 
-app = FastAPI()
-
-
-# Temporary storage while the backend is running
-current_profile = None
-current_resume_skills = []
-
-
-BASE_DIR = Path(__file__).resolve().parent
-
-JOBS_PATH = BASE_DIR / "data" / "jobs.json"
-SKILLS_PATH = BASE_DIR / "data" / "skills.json"
-
-
-def load_jobs():
-    with open(JOBS_PATH, "r", encoding="utf-8") as file:
-        return json.load(file)
-
-
-def load_skills():
-    with open(SKILLS_PATH, "r", encoding="utf-8") as file:
-        return json.load(file)
-
-
-# Allow the Next.js frontend to communicate with FastAPI
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
 class SkillGapRequest(BaseModel):
     student_skills: list[str]
     job_id: str
@@ -76,13 +182,27 @@ class StudentProfile(BaseModel):
     name: str
     education: str
     experience_years: int = Field(ge=0, le=50)
-    skills: list[str]
 
+    # Skills are extracted from the resume.
+    # They are optional here so the Profile page
+    # does not need to manually collect skills.
+    skills: list[str] = []
+
+
+class ProgressRequest(BaseModel):
+    skill: str
+    completed: bool
+
+
+# ============================================================
+# BASIC ROUTES
+# ============================================================
 
 @app.get("/")
 def home():
     return {
-        "message": "AI Skill Gap Analyzer Backend"
+        "message": "AI Skill Gap Analyzer Backend",
+        "status": "running"
     }
 
 
@@ -94,14 +214,18 @@ def health():
     }
 
 
+# ============================================================
+# JOB ROUTES
+# ============================================================
+
 @app.get("/jobs")
 def get_jobs():
-    jobs = load_jobs()
-    return jobs
+    return load_jobs()
 
 
 @app.get("/jobs/{job_id}")
 def get_job(job_id: str):
+
     jobs = load_jobs()
 
     if job_id not in jobs:
@@ -112,11 +236,18 @@ def get_job(job_id: str):
     return jobs[job_id]
 
 
+# ============================================================
+# SKILLS
+# ============================================================
+
 @app.get("/skills")
 def get_skills():
-    skills = load_skills()
-    return skills
+    return load_skills()
 
+
+# ============================================================
+# ML PREDICTION
+# ============================================================
 
 @app.post("/api/predict")
 def predict(student: StudentData):
@@ -129,6 +260,10 @@ def predict(student: StudentData):
         "job_readiness": readiness
     }
 
+
+# ============================================================
+# SKILL GAP
+# ============================================================
 
 @app.post("/api/skill-gap")
 def skill_gap(request: SkillGapRequest):
@@ -146,6 +281,10 @@ def skill_gap(request: SkillGapRequest):
     return result
 
 
+# ============================================================
+# LEARNING RECOMMENDATIONS
+# ============================================================
+
 @app.post("/api/recommendations")
 def recommendations(request: SkillGapRequest):
 
@@ -159,118 +298,220 @@ def recommendations(request: SkillGapRequest):
             "error": "Job not found"
         }
 
-    recommendations = generate_recommendations(
+    recommendations_data = generate_recommendations(
         result["missing_skills"]
     )
 
     return {
         "job_title": result["job_title"],
         "missing_skills": result["missing_skills"],
-        "recommendations": recommendations
+        "recommendations": recommendations_data
     }
 
+
+# ============================================================
+# RESUME UPLOAD + SKILL EXTRACTION
+# ============================================================
+
+@app.post("/api/resume")
+async def upload_resume(file: UploadFile = File(...)):
+
+    if file.content_type != "application/pdf":
+        return {
+            "error": "Only PDF files are supported."
+        }
+
+    file_bytes = await file.read()
+
+    try:
+        resume_text = extract_text_from_pdf(
+            io.BytesIO(file_bytes)
+        )
+    except Exception:
+        return {
+            "error": "Could not read this PDF. Please try a different file."
+        }
+
+    if not resume_text.strip():
+        return {
+            "error": "No readable text found in this PDF."
+        }
+
+    extracted_skills = extract_skills(resume_text)
+
+    profile = load_profile()
+
+    if profile is None:
+        return {
+            "error": "Please create your profile before uploading a resume."
+        }
+
+    # --------------------------------------------------------
+    # IMPORTANT:
+    # Resume skills are now the canonical skill source.
+    #
+    # We REPLACE the previous extracted skill list instead
+    # of merging it with manually selected profile skills.
+    # --------------------------------------------------------
+
+    profile["skills"] = sorted(
+        set(extracted_skills)
+    )
+
+    save_profile(profile)
+
+    return {
+        "message": "Resume analyzed successfully!",
+        "extracted_skills": profile["skills"],
+        "skills_found": len(profile["skills"])
+    }
+
+
+# ============================================================
+# RESUME SKILLS
+# ============================================================
+
+@app.get("/api/resume/skills")
+def get_resume_skills():
+
+    profile = load_profile()
+
+    if profile is None:
+        return {
+            "skills": []
+        }
+
+    skills = profile.get("skills", [])
+
+    return {
+        "skills": skills,
+        "skills_found": len(skills)
+    }
+
+
+# ============================================================
+# PROFILE
+# ============================================================
 
 @app.post("/api/profile")
 def create_profile(profile: StudentProfile):
 
-    global current_profile
+    # --------------------------------------------------------
+    # Keep previously extracted resume skills.
+    #
+    # The Profile page only collects:
+    # name, education and experience.
+    #
+    # Saving the profile must NOT erase skills that were
+    # already extracted from the resume.
+    # --------------------------------------------------------
 
-    current_profile = profile.model_dump()
+    existing_profile = load_profile()
+
+    existing_skills = []
+
+    if existing_profile is not None:
+        existing_skills = existing_profile.get(
+            "skills",
+            []
+        )
+
+    profile_data = {
+        "name": profile.name,
+        "education": profile.education,
+        "experience_years": profile.experience_years,
+        "skills": existing_skills
+    }
+
+    save_profile(profile_data)
 
     return {
         "message": "Student profile saved successfully!",
-        "profile": current_profile
+        "profile": profile_data
     }
 
 
 @app.get("/api/profile")
 def get_profile():
 
-    if current_profile is None:
+    profile = load_profile()
+
+    if profile is None:
         return {
             "error": "No profile found"
         }
 
     return {
-        "profile": current_profile
+        "profile": profile
     }
 
 
-@app.post("/api/resume")
-async def upload_resume(file: UploadFile = File(...)):
+@app.delete("/api/profile")
+def delete_profile():
 
-    global current_resume_skills
-
-    try:
-
-        # Check file type
-        if file.content_type != "application/pdf":
-            return {
-                "error": "Only PDF resumes are supported."
-            }
-
-        # Read uploaded file
-        file_content = await file.read()
-
-        # Maximum file size = 5 MB
-        max_size = 5 * 1024 * 1024
-
-        if len(file_content) > max_size:
-            return {
-                "error": "Resume must be smaller than 5 MB."
-            }
-
-        # Create temporary PDF path
-        resume_path = BASE_DIR / "uploaded_resume.pdf"
-
-        with open(resume_path, "wb") as output_file:
-            output_file.write(file_content)
-
-        # Read PDF
-        reader = PdfReader(resume_path)
-
-        extracted_text = ""
-
-        for page in reader.pages:
-
-            text = page.extract_text()
-
-            if text:
-                extracted_text += text + "\n"
-
-        # Check whether text was extracted
-        if not extracted_text.strip():
-            return {
-                "error": "Could not extract text from this PDF. Please use a text-based PDF resume."
-            }
-
-        # Extract skills
-        extracted_skills = extract_skills(extracted_text)
-
-        # Store skills temporarily
-        current_resume_skills = extracted_skills
-
-        return {
-            "message": "Resume analyzed successfully!",
-            "filename": file.filename,
-            "extracted_skills": extracted_skills,
-            "skill_count": len(extracted_skills),
-            "text_length": len(extracted_text)
-        }
-
-    except Exception as error:
-
-        print("RESUME ERROR:", error)
-
-        return {
-            "error": f"Resume processing failed: {str(error)}"
-        }
-
-
-@app.get("/api/resume/skills")
-def get_resume_skills():
+    if PROFILE_PATH.exists():
+        PROFILE_PATH.unlink()
 
     return {
-        "skills": current_resume_skills,
-        "skill_count": len(current_resume_skills)
+        "message": "Student profile deleted successfully."
+    }
+
+
+# ============================================================
+# PROGRESS
+# ============================================================
+
+@app.get("/api/progress")
+def get_progress():
+
+    progress = load_progress()
+
+    return progress
+
+
+@app.post("/api/progress")
+def update_progress(request: ProgressRequest):
+
+    progress = load_progress()
+
+    completed_skills = progress.get(
+        "completed_skills",
+        []
+    )
+
+    if request.completed:
+
+        if request.skill not in completed_skills:
+            completed_skills.append(request.skill)
+
+    else:
+
+        completed_skills = [
+            skill
+            for skill in completed_skills
+            if skill != request.skill
+        ]
+
+    progress["completed_skills"] = completed_skills
+
+    save_progress(progress)
+
+    return {
+        "message": "Progress updated successfully!",
+        "completed_skills": completed_skills
+    }
+
+
+@app.delete("/api/progress")
+def clear_progress():
+
+    progress = {
+        "completed_skills": []
+    }
+
+    save_progress(progress)
+
+    return {
+        "message": "Learning progress cleared successfully.",
+        "completed_skills": []
     }
