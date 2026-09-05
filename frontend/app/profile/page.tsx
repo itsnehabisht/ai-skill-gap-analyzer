@@ -16,6 +16,7 @@ export default function ProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [switchingUser, setSwitchingUser] = useState(false);
 
   const [saveMessage, setSaveMessage] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -217,7 +218,6 @@ export default function ProfilePage() {
       }, 4000);
 
     } catch (error) {
-
       console.error(
         "Error saving profile:",
         error
@@ -226,10 +226,116 @@ export default function ProfilePage() {
       setSaveError(
         "Could not save your profile. Please make sure the backend is running."
       );
-
     } finally {
-
       setSaving(false);
+    }
+  }
+
+  // --------------------------------------------------
+  // SWITCH / START NEW USER
+  // --------------------------------------------------
+
+  async function handleSwitchUser() {
+    const confirmed = window.confirm(
+      "Start a new user?\n\nYour current profile, resume skills, and progress will be archived and cleared from the active account."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setSwitchingUser(true);
+    setSaveError("");
+    setSaveMessage("");
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/users/switch",
+        {
+          method: "POST",
+          cache: "no-store",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Could not switch to a new user."
+        );
+      }
+
+      const data = await response.json();
+
+      console.log(
+        "User switch response:",
+        data
+      );
+
+      // ---------------------------------------------
+      // CLEAR FRONTEND STATE FROM PREVIOUS USER
+      // ---------------------------------------------
+
+      localStorage.removeItem("selectedJob");
+      localStorage.removeItem("profileUpdatedAt");
+      localStorage.removeItem("resumeSkillsUpdatedAt");
+
+      // Remove any old progress-related localStorage
+      // values that may exist from older versions.
+      Object.keys(localStorage).forEach((key) => {
+        if (
+          key.toLowerCase().includes("progress")
+        ) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      // ---------------------------------------------
+      // RESET CURRENT PROFILE FORM
+      // ---------------------------------------------
+
+      setName("");
+      setEducation("");
+      setExperience("");
+
+      // ---------------------------------------------
+      // NOTIFY OTHER PAGES
+      // ---------------------------------------------
+
+      window.dispatchEvent(
+        new Event("profileUpdated")
+      );
+
+      window.dispatchEvent(
+        new Event("resumeSkillsUpdated")
+      );
+
+      // ---------------------------------------------
+      // SUCCESS MESSAGE
+      // ---------------------------------------------
+
+      setSaveMessage(
+        "New user started successfully! ✨"
+      );
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
+      setTimeout(() => {
+        setSaveMessage("");
+      }, 4000);
+
+    } catch (error) {
+      console.error(
+        "Error switching user:",
+        error
+      );
+
+      setSaveError(
+        "Could not start a new user. Please make sure the backend is running."
+      );
+    } finally {
+      setSwitchingUser(false);
     }
   }
 
@@ -425,7 +531,7 @@ export default function ProfilePage() {
 
               <div>
                 <p className="text-sm font-semibold text-[#211D3D]">
-                  Profile saved successfully!
+                  {saveMessage}
                 </p>
 
                 <p className="mt-0.5 text-xs text-[#615C7A]">
@@ -443,7 +549,7 @@ export default function ProfilePage() {
 
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || switchingUser}
             className="rounded-2xl bg-[#4C5FEA] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:-translate-y-0.5 hover:bg-[#3B4AD1] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving
@@ -454,6 +560,44 @@ export default function ProfilePage() {
         </div>
 
       </form>
+
+      {/* START NEW USER */}
+
+      <section className="rounded-[28px] border border-red-100 bg-white p-6 shadow-[0_18px_60px_rgba(72,50,120,0.05)] sm:p-8">
+
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-500">
+              USER MANAGEMENT
+            </p>
+
+            <h2 className="mt-2 text-xl font-bold text-[#211D3D]">
+              Start New User
+            </h2>
+
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-[#615C7A]">
+              Switching users archives the current profile
+              and progress, then clears the active workspace
+              so another student can start fresh.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSwitchUser}
+            disabled={switchingUser || saving}
+            className="shrink-0 rounded-2xl border border-red-200 bg-red-50 px-6 py-3.5 text-sm font-semibold text-red-600 transition hover:-translate-y-0.5 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {switchingUser
+              ? "Starting new user..."
+              : "Start New User"}
+          </button>
+
+        </div>
+
+      </section>
+
     </div>
   );
 }

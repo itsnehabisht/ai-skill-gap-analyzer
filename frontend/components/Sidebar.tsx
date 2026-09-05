@@ -45,6 +45,11 @@ const navigation = [
     href: "/reports",
     icon: "▤",
   },
+  {
+    name: "Previous Users",
+    href: "/users",
+    icon: "♙",
+  },
 ];
 
 export default function Sidebar() {

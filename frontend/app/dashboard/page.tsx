@@ -43,6 +43,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadDashboard() {
+      setLoading(true);
+      setMessage("");
+      setProfile(null);
+      setSkillGap(null);
+      setRecommendations([]);
+      setCompletedSkills([]);
+      setJobReadiness(null);
+
       try {
         const selectedJob = localStorage.getItem("selectedJob");
 
@@ -276,7 +284,37 @@ export default function DashboardPage() {
       }
     }
 
+    // --------------------------------
+    // INITIAL DASHBOARD LOAD
+    // --------------------------------
+
     loadDashboard();
+
+    // --------------------------------
+    // REFRESH WHEN USER/RESUME CHANGES
+    // --------------------------------
+
+    window.addEventListener(
+      "profileUpdated",
+      loadDashboard
+    );
+
+    window.addEventListener(
+      "resumeSkillsUpdated",
+      loadDashboard
+    );
+
+    return () => {
+      window.removeEventListener(
+        "profileUpdated",
+        loadDashboard
+      );
+
+      window.removeEventListener(
+        "resumeSkillsUpdated",
+        loadDashboard
+      );
+    };
   }, []);
 
   if (loading) {

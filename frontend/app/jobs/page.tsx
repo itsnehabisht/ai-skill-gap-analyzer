@@ -60,6 +60,33 @@ export default function JobsPage() {
     fetchJobs();
   }, []);
 
+  // --------------------------------------------------
+  // RESET CAREER WHEN A NEW USER STARTS
+  // --------------------------------------------------
+
+  useEffect(() => {
+    function handleProfileUpdated() {
+      const currentSelectedJob =
+        localStorage.getItem("selectedJob");
+
+      if (!currentSelectedJob) {
+        setSelectedJobId(null);
+      }
+    }
+
+    window.addEventListener(
+      "profileUpdated",
+      handleProfileUpdated
+    );
+
+    return () => {
+      window.removeEventListener(
+        "profileUpdated",
+        handleProfileUpdated
+      );
+    };
+  }, []);
+
   function selectJob(jobId: string) {
     localStorage.setItem("selectedJob", jobId);
     setSelectedJobId(jobId);
@@ -101,7 +128,6 @@ export default function JobsPage() {
         </p>
       </section>
 
-
       <section className="grid gap-5 md:grid-cols-2">
 
         {Object.entries(jobs).map(([jobId, job]) => {
@@ -141,12 +167,10 @@ export default function JobsPage() {
 
               </div>
 
-
               <p className="mt-4 min-h-12 text-sm leading-6 text-zinc-400">
                 {job.description ||
                   "Build the skills needed for this career path."}
               </p>
-
 
               <div className="mt-5">
 
@@ -169,7 +193,6 @@ export default function JobsPage() {
 
               </div>
 
-
               <button
                 onClick={() => selectJob(jobId)}
                 className={`mt-6 w-full rounded-xl px-4 py-3 text-sm font-semibold transition ${
@@ -188,7 +211,6 @@ export default function JobsPage() {
         })}
 
       </section>
-
 
       {selectedJobId && (
         <section className="rounded-3xl border border-blue-400/20 bg-blue-400/5 p-8">

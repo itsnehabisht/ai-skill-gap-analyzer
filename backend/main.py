@@ -1,6 +1,8 @@
 import sys
 import json
 import io
+import csv
+from datetime import datetime
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -57,6 +59,9 @@ JOBS_PATH = BASE_DIR / "data" / "jobs.json"
 SKILLS_PATH = BASE_DIR / "data" / "skills.json"
 PROFILE_PATH = BASE_DIR / "data" / "profile.json"
 PROGRESS_PATH = BASE_DIR / "data" / "progress.json"
+
+# Historical users are stored here as CSV records.
+USERS_HISTORY_PATH = BASE_DIR / "data" / "users_history.csv"
 
 
 # ============================================================
@@ -152,6 +157,89 @@ def save_progress(progress):
             indent=4,
             ensure_ascii=False
         )
+
+
+# ============================================================
+# HISTORICAL USER STORAGE
+# ============================================================
+
+def archive_current_user():
+    """
+    Save the current user's profile and progress
+    into users_history.csv before starting a new user.
+
+    The CSV keeps one row per previous user.
+    """
+
+    profile = load_profile()
+
+    if profile is None:
+        return False
+
+    progress = load_progress()
+
+    USERS_HISTORY_PATH.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    file_exists = USERS_HISTORY_PATH.exists()
+
+    with open(
+        USERS_HISTORY_PATH,
+        "a",
+        newline="",
+        encoding="utf-8"
+    ) as file:
+
+        writer = csv.DictWriter(
+            file,
+            fieldnames=[
+                "archived_at",
+                "name",
+                "education",
+                "experience_years",
+                "skills",
+                "completed_skills"
+            ]
+        )
+
+        if not file_exists:
+            writer.writeheader()
+
+        writer.writerow({
+            "archived_at": datetime.now().isoformat(
+                timespec="seconds"
+            ),
+            "name": profile.get("name", ""),
+            "education": profile.get("education", ""),
+            "experience_years": profile.get(
+                "experience_years",
+                0
+            ),
+            "skills": ", ".join(
+                profile.get("skills", [])
+            ),
+            "completed_skills": ", ".join(
+                progress.get("completed_skills", [])
+            )
+        })
+
+    return True
+
+
+def clear_current_user():
+    """
+    Remove the active user's profile and reset
+    learning progress so the next user starts fresh.
+    """
+
+    if PROFILE_PATH.exists():
+        PROFILE_PATH.unlink()
+
+    save_progress({
+        "completed_skills": []
+    })
 
 
 # ============================================================
@@ -327,6 +415,7 @@ async def upload_resume(file: UploadFile = File(...)):
         resume_text = extract_text_from_pdf(
             io.BytesIO(file_bytes)
         )
+
     except Exception:
         return {
             "error": "Could not read this PDF. Please try a different file."
@@ -457,6 +546,105 @@ def delete_profile():
     }
 
 
+# ============================================================
+# SWITCH / START NEW USER
+# ============================================================
+
+@app.post("/api/users/switch")
+def switch_user():
+
+    archived = archive_current_user()
+
+    # --------------------------------------------------------
+    # IMPORTANT:
+    # Archive first, then clear the active user's data.
+    #
+    # This prevents the current user's information from
+    # being lost when starting a new user's session.
+    # --------------------------------------------------------
+
+    clear_current_user()
+
+    return {
+        "message": (
+            "Current user archived successfully. "
+            "Ready for a new user."
+            if archived
+            else "No current user found. Ready for a new user."
+        ),
+        "archived": archived
+    }
+
+# ============================================================
+# PREVIOUS USERS / USER HISTORY
+# ============================================================
+
+@app.get("/api/users/history")
+def get_user_history():
+
+    if not USERS_HISTORY_PATH.exists():
+        return {
+            "users": []
+        }
+
+    try:
+        with open(
+            USERS_HISTORY_PATH,
+            "r",
+            newline="",
+            encoding="utf-8"
+        ) as file:
+
+            reader = csv.DictReader(file)
+
+            users = []
+
+            for row in reader:
+                users.append({
+                    "archived_at": row.get(
+                        "archived_at",
+                        ""
+                    ),
+                    "name": row.get(
+                        "name",
+                        ""
+                    ),
+                    "education": row.get(
+                        "education",
+                        ""
+                    ),
+                    "experience_years": row.get(
+                        "experience_years",
+                        "0"
+                    ),
+                    "skills": [
+                        skill.strip()
+                        for skill in row.get(
+                            "skills",
+                            ""
+                        ).split(",")
+                        if skill.strip()
+                    ],
+                    "completed_skills": [
+                        skill.strip()
+                        for skill in row.get(
+                            "completed_skills",
+                            ""
+                        ).split(",")
+                        if skill.strip()
+                    ]
+                })
+
+        return {
+            "users": users
+        }
+
+    except (OSError, csv.Error):
+        return {
+            "error": "Could not read user history."
+        }
+
+    
 # ============================================================
 # PROGRESS
 # ============================================================
